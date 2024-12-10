@@ -30,7 +30,10 @@ enum nodeOperations{
     O_ADD = 43,
     O_SUB = 45,
     O_MUL = 42,
-    O_DIV = 47
+    O_DIV = 47,
+    O_SIN = 115,
+    O_COS = 99,
+    O_TAN = 116
 
 };
 
@@ -39,6 +42,7 @@ static node_t*  GetG        (line_t* line);
 static node_t*  GetE        (line_t* line);
 static node_t*  GetT        (line_t* line);
 static node_t*  GetP        (line_t* line);
+static int      GetF        (line_t* line);
 static int      SyntaxError (line_t* line, int param);
 
 static node_t*  NewNode     (tree_t* tree, int data, int type, node_t* left, node_t* right);
@@ -201,7 +205,50 @@ static node_t* GetP(line_t* line){
         return node;
     }
 
-    else{
+    else if (line->buffer[line->ptr] == 'x' && !isalpha(line->buffer[line->ptr + 1])){
+        line->ptr++;
+
+        return NewNode(line->tree, 'x', T_VAR, nullptr, nullptr);
+    }
+
+    else if (isdigit(line->buffer[line->ptr])){
         return GetN(line);
     }
+    
+    else{
+        int op = GetF(line);
+
+        if (line->buffer[line->ptr] == '('){
+            line->ptr++;
+
+            node_t* node = GetE(line);
+            if (line->buffer[line->ptr] != ')') SyntaxError(line, S_BRCKT);
+
+            line->ptr++;
+            node_t* newNode = NewNode(line->tree, op, T_OPR, nullptr, node);
+
+            return newNode;
+        }
+    }
+}
+
+static int GetF(line_t* line){
+    int op = 0;
+
+    if (!strncmp(line->buffer + line->ptr, "sin", 3)){
+        line->ptr += 3;
+        op = O_SIN;
+    }
+
+    else if (!strncmp(line->buffer + line->ptr, "cos", 3)){
+        line->ptr += 3;
+        op = O_COS;
+    }
+
+    else if (!strncmp(line->buffer + line->ptr, "tan", 3)){
+        line->ptr += 3;
+        op = O_TAN;
+    }
+
+    return op;
 }
