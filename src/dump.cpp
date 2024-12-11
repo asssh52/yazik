@@ -2,12 +2,16 @@
 
 const int64_t MAXDOT_BUFF    = 8;
 const int64_t MAXLEN_COMMAND = 64;
+const int64_t MAX_HTML_PRNT  = 1024;
 
 static int NodeDump         (line_t* line, node_t* node, int depth, int param);
 static int StartLineDump    (line_t* line);
 static int EndLineDump      (line_t* line);
 static int DoDot            (line_t* line);
 static int HTMLGenerateBody (line_t* line);
+static int TokenDump        (line_t* line, node_t* node);
+static int HTMLPrint        (line_t* line, char* text);
+
 
 
 enum errors_dump{
@@ -35,6 +39,87 @@ int TreeDump(line_t* line){
     return OK;
 }
 
+int TokensDump(line_t* line){
+
+    StartLineDump(line);
+
+    for (int i = 0; i < MAX_TKNS; i++){
+        TokenDump(line, line->tokens + i);
+    }
+
+    EndLineDump(line);
+    DoDot(line);
+    HTMLGenerateBody(line);
+
+    char* text = (char*) calloc(MAX_HTML_PRNT, sizeof(*text));
+
+    for (int i = 0; i < line->numId; i++){
+        snprintf(text, MAX_HTML_PRNT, "%s%d. name:\"", text, i);
+
+        for (int j = 0; j < line->id[i].len; j++){
+            snprintf(text, MAX_HTML_PRNT, "%s%c", text, line->id[i].name[j]);
+        }
+
+        snprintf(text, MAX_HTML_PRNT, "%s\"\t len:%llu <br>", text, line->id[i].len);
+    }
+
+    HTMLPrint(line, text);
+
+    return OK;
+}
+
+int DumpIds(line_t* line, FILE* file){
+    fprintf(file, ORG "\n-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n" RESET);
+    fprintf(file, "Nametable dump:\n\n");
+
+    for (int i = 0; i < line->numId; i++){
+        fprintf(file, "%d. name:", i);
+        for (int j = 0; j < line->id[i].len; j++){
+            fprintf(file, "%c", line->id[i].name[j]);
+        }
+
+        fprintf(file, "\t len:%llu\n", line->id[i].len);
+    }
+    fprintf(file, ORG "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n" RESET);
+
+    return OK;
+}
+
+static int TokenDump(line_t* line, node_t* node){
+    char outBuff[MAXDOT_BUFF] = {};
+    uint64_t num = node - line->tokens;
+
+/*---------DETAILED---------*/
+
+    if (node->type == T_NUM){
+        fprintf(line->files.dot,
+            "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" {{ %0.3llu } | { p: %p } | { num: %0.2lf } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
+            num, num, node, node->data, node->left, node->right, node->parent);
+    }
+
+    else if (node->type == T_OPR){
+        snprintf(outBuff, MAXDOT_BUFF, "%c", (char)node->data);
+
+        fprintf(line->files.dot,
+            "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#fff3e6\";label = \" {{ %0.3llu } | { p: %p } | { oper: %s } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
+            num, num, node, outBuff, node->left, node->right, node->parent);
+    }
+
+    else if (node->type == T_ID){
+        fprintf(line->files.dot,
+            "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" {{ %0.3llu } | { p: %p } | { id: %d }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
+            num, num, node, (char)node->data, node->left, node->right, node->parent);
+    }
+
+    else {
+        fprintf(line->files.dot,
+            "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#ffe6fe\";label = \" {{ %0.3llu } | { p: %p } | { unknown %0.0lf }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
+            num, num, node, node->data, node->left, node->right, node->parent);
+    }
+
+    return OK;
+}
+
 static int NodeDump(line_t* line, node_t* node, int depth, int param){
     if (!node) return OK;
     if (depth > line->tree->numElem) return ERR;
@@ -56,7 +141,7 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
                 node->id, node->id, outBuff);
         }
 
-        else if (node->type == T_VAR){
+        else if (node->type == T_ID){
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" { %0.3llu } | { var: %c }\"];\n",
                 node->id, node->id, (char)node->data);
@@ -86,7 +171,7 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
                 node->id, node->id, node, outBuff, node->left, node->right, node->parent);
         }
 
-        else if (node->type == T_VAR){
+        else if (node->type == T_ID){
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" {{ %0.3llu } | { p: %p } | { var: %c }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
                 node->id, node->id, node, (char)node->data, node->left, node->right, node->parent);
@@ -175,6 +260,16 @@ static int HTMLGenerateBody(line_t* line){
     fprintf(line->files.html, "\t<h3 style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> Num elems: %llu</h3>\n", line->tree->numElem);
 
     fprintf(line->files.html, "\t<img src=\"./bin/png/output%llu.png\">\n\t<br>\n\t<br>\n\t<br>\n", line->tree->numDump - 1);
+
+    fprintf(line->files.html, "</div>\n");
+
+    return OK;
+}
+
+static int HTMLPrint(line_t* line, char* text){
+    fprintf(line->files.html, "<div style=\"text-align: left;\">\n");
+
+    fprintf(line->files.html, "\t<h4 style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> %s </h3>\n", text);
 
     fprintf(line->files.html, "</div>\n");
 

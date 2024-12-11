@@ -6,13 +6,30 @@
 #include <ctype.h>
 #include "../hpp/colors.hpp"
 
+const int     OP_LEN   = 8;
+const int64_t MAX_BUFF = 128;
+const int64_t MAX_TKNS = 16;
+const int64_t MAX_IDS  = 16;
+
 enum nodeTypes{
 
     T_NUM = 1,
-    T_VAR = 2,
+    T_ID  = 2,
     T_OPR = 3
 
 };
+
+
+
+typedef struct opName_t{
+
+    char    name[OP_LEN];
+    int     opNum;
+    int     len;
+
+} opName_t;
+
+
 
 typedef struct files{
 
@@ -27,6 +44,8 @@ typedef struct files{
 
 } files_t;
 
+
+
 typedef struct node_t{
 
     node_t*     parent;
@@ -39,6 +58,8 @@ typedef struct node_t{
 
 } node_t;
 
+
+
 typedef struct tree{
 
     int64_t numElem;
@@ -48,10 +69,23 @@ typedef struct tree{
 
 } tree_t;
 
+typedef struct names_t{
+
+    char*       name;
+    uint64_t    len;
+
+} names_t;
+
 typedef struct line{
 
     char*       buffer;
     uint64_t    ptr;
+
+    node_t*     tokens;
+    uint64_t    tptr;
+
+    names_t*    id;
+    uint64_t    numId;
 
     files_t     files;
 
@@ -60,6 +94,7 @@ typedef struct line{
 } line_t;
 
 
+int AnalyseInput    (line_t* line);
 
 int LineCtor        (line_t* line);
 int LineRead        (line_t* line);

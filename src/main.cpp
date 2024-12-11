@@ -6,9 +6,12 @@ int main(){
 
 
     LineCtor(&line);
-    HTMLGenerateHead(&line);
     LineRead(&line);
-    LineProcess(&line);
+    HTMLGenerateHead(&line);
+
+    AnalyseInput(&line);
+
+    // LineProcess(&line);
     HTMLDumpGenerate(&line);
 
 
