@@ -11,7 +11,7 @@ int main(){
 
     AnalyseInput(&line);
 
-    // LineProcess(&line);
+    LineProcess(&line);
     HTMLDumpGenerate(&line);
 
 

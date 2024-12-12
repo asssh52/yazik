@@ -12,8 +12,6 @@ static int HTMLGenerateBody (line_t* line);
 static int TokenDump        (line_t* line, node_t* node);
 static int HTMLPrint        (line_t* line, char* text);
 
-
-
 enum errors_dump{
 
     OK  = 0,
@@ -87,34 +85,33 @@ int DumpIds(line_t* line, FILE* file){
 
 static int TokenDump(line_t* line, node_t* node){
     char outBuff[MAXDOT_BUFF] = {};
-    uint64_t num = node - line->tokens;
 
 /*---------DETAILED---------*/
 
     if (node->type == T_NUM){
         fprintf(line->files.dot,
             "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" {{ %0.3llu } | { p: %p } | { num: %0.2lf } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-            num, num, node, node->data, node->left, node->right, node->parent);
+            node->id, node->id, node, node->data.num, node->left, node->right, node->parent);
     }
 
     else if (node->type == T_OPR){
-        snprintf(outBuff, MAXDOT_BUFF, "%c", (char)node->data);
+        snprintf(outBuff, MAXDOT_BUFF, "%c", node->data.op);
 
         fprintf(line->files.dot,
             "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#fff3e6\";label = \" {{ %0.3llu } | { p: %p } | { oper: %s } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-            num, num, node, outBuff, node->left, node->right, node->parent);
+            node->id, node->id, node, outBuff, node->left, node->right, node->parent);
     }
 
     else if (node->type == T_ID){
         fprintf(line->files.dot,
             "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" {{ %0.3llu } | { p: %p } | { id: %d }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-            num, num, node, (char)node->data, node->left, node->right, node->parent);
+            node->id, node->id, node, node->data.id, node->left, node->right, node->parent);
     }
 
     else {
         fprintf(line->files.dot,
             "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#ffe6fe\";label = \" {{ %0.3llu } | { p: %p } | { unknown %0.0lf }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-            num, num, node, node->data, node->left, node->right, node->parent);
+            node->id, node->id, node, node->data.num, node->left, node->right, node->parent);
     }
 
     return OK;
@@ -122,7 +119,6 @@ static int TokenDump(line_t* line, node_t* node){
 
 static int NodeDump(line_t* line, node_t* node, int depth, int param){
     if (!node) return OK;
-    if (depth > line->tree->numElem) return ERR;
 
     char outBuff[MAXDOT_BUFF] = {};
 /*---------SIMPLE---------*/
@@ -130,11 +126,11 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
         if (node->type == T_NUM){
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3llu } | { num: %0.2lf }\"];\n",
-                node->id, node->id, node->data);
+                node->id, node->id, node->data.num);
         }
 
         else if (node->type == T_OPR){
-            snprintf(outBuff, MAXDOT_BUFF, "%c", (char)node->data);
+            snprintf(outBuff, MAXDOT_BUFF, "%c", node->data.op);
 
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#fff3e6\";label = \" { %0.3llu } | { oper: %s }\"];\n",
@@ -143,14 +139,14 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
 
         else if (node->type == T_ID){
             fprintf(line->files.dot,
-                "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" { %0.3llu } | { var: %c }\"];\n",
-                node->id, node->id, (char)node->data);
+                "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" { %0.3llu } | { id: %d }\"];\n",
+                node->id, node->id, node->data.id);
         }
 
         else {
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#ffe6fe\";label = \" { %0.3llu } | { unknown %0.0lf }\"];\n",
-                node->id, node->id, node->data);
+                node->id, node->id, node->data.num);
         }
     }
 /*---------SIMPLE---------*/
@@ -160,11 +156,11 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
         if (node->type == T_NUM){
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" {{ %0.3llu } | { p: %p } | { num: %0.2lf } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-                node->id, node->id, node, node->data, node->left, node->right, node->parent);
+                node->id, node->id, node, node->data.num, node->left, node->right, node->parent);
         }
 
         else if (node->type == T_OPR){
-            snprintf(outBuff, MAXDOT_BUFF, "%c", (char)node->data);
+            snprintf(outBuff, MAXDOT_BUFF, "%c", node->data.op);
 
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#fff3e6\";label = \" {{ %0.3llu } | { p: %p } | { oper: %s } | {left: %p} | {right: %p} | {parent: %p}}\"];\n",
@@ -174,13 +170,13 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
         else if (node->type == T_ID){
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6ffe6\";label = \" {{ %0.3llu } | { p: %p } | { var: %c }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-                node->id, node->id, node, (char)node->data, node->left, node->right, node->parent);
+                node->id, node->id, node, node->data.id, node->left, node->right, node->parent);
         }
 
         else {
             fprintf(line->files.dot,
                 "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#ffe6fe\";label = \" {{ %0.3llu } | { p: %p } | { unknown %0.0lf }| {left: %p} | {right: %p} | {parent: %p}}\"];\n",
-                node->id, node->id, node, node->data, node->left, node->right, node->parent);
+                node->id, node->id, node, node->data.num, node->left, node->right, node->parent);
         }
     }
 /*---------DETAILED---------*/

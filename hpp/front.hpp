@@ -8,7 +8,7 @@
 
 const int     OP_LEN   = 8;
 const int64_t MAX_BUFF = 128;
-const int64_t MAX_TKNS = 16;
+const int64_t MAX_TKNS = 32;
 const int64_t MAX_IDS  = 16;
 
 enum nodeTypes{
@@ -44,7 +44,13 @@ typedef struct files{
 
 } files_t;
 
+typedef union data_t{
 
+    double num;
+    int op;
+    int id;
+
+} data_t;
 
 typedef struct node_t{
 
@@ -54,7 +60,8 @@ typedef struct node_t{
 
     int         type;
     uint64_t    id;
-    double      data;
+
+    data_t      data;
 
 } node_t;
 

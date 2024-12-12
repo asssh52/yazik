@@ -33,7 +33,8 @@ enum nodeOperations{
     O_COS = 99,
     O_TAN = 116,
     O_OBR = 40,
-    O_CBR = 41
+    O_CBR = 41,
+    O_TRM = 36,
 
 };
 
@@ -47,19 +48,20 @@ const opName_t opList[] = {
     {"cos", O_COS, 3},
     {"tan", O_TAN, 3},
     {"(",   O_OBR, 1},
-    {")",   O_CBR, 1}
+    {")",   O_CBR, 1},
+    {"$",   O_TRM, 1}
 
 };
 
-
-
-static node_t*  GetN            (line_t* line);
+static node_t*  GetNum          (line_t* line);
 static node_t*  GetG            (line_t* line);
 static node_t*  GetE            (line_t* line);
 static node_t*  GetT            (line_t* line);
 static node_t*  GetP            (line_t* line);
-static int      GetF            (line_t* line);
+static node_t*  GetId           (line_t* line);
 static int      SyntaxError     (line_t* line, int param);
+
+static int      FillTokensId    (line_t* line);
 
 static int      FindOp          (char* word, int len);
 static double   ProcessWord     (char* word, int len, int* type);
@@ -87,6 +89,18 @@ int LineCtor(line_t* line){
 
     line->files.dotName = DFLT_DOT_FILE;
 
+    FillTokensId(line);
+
+    return OK;
+}
+
+/*========================================================================*/
+
+static int FillTokensId(line_t* line){
+    for (int i = 0; i < MAX_TKNS; i++){
+        line->tokens[i].id = i;
+    }
+
     return OK;
 }
 
@@ -103,7 +117,9 @@ int LineRead(line_t* line){
 int LineProcess(line_t* line){
     line->tree->root = GetG(line);
 
-    printf("%lld\n", line->tree->numElem);
+    TokensDump(line);
+    DumpIds(line, stdout);
+
     TreeDump(line);
 
     return OK;
@@ -124,27 +140,28 @@ int AnalyseInput(line_t* line){
         bool canBeId        = isalpha(line->buffer[line->ptr])     || isdigit(line->buffer[line->ptr])     || line->buffer[line->ptr]     == '_';
         bool canNextBeId    = isalpha(line->buffer[line->ptr + 1]) || isdigit(line->buffer[line->ptr + 1]) || line->buffer[line->ptr + 1] == '_';
 
+        //ONE LETTER VARIABLES
         if (isalpha(line->buffer[line->ptr]) && !canNextBeId && startId == 0){
 
             ProccessName(line, 0);
 
             line->ptr += 1;
         }
-
+        //START OF ID
         else if (isalpha(line->buffer[line->ptr]) && startId == 0){
             idLen  += 1;
             startId = 1;
 
             line->ptr += 1;
         }
-
+        //MIDDLE OF ID
         else if (startId && canBeId && canNextBeId){
             idLen  += 1;
 
             line->ptr += 1;
         }
 
-        //WORDS
+        //END OF ID
         else if (startId && canBeId && !canNextBeId){
             // semantic
 
@@ -162,8 +179,8 @@ int AnalyseInput(line_t* line){
             value = strtod(line->buffer + line->ptr, &numEnd);
             // semantic
 
-            line->tokens[line->tptr].type = T_NUM;
-            line->tokens[line->tptr].data = value;
+            line->tokens[line->tptr].type       = T_NUM;
+            line->tokens[line->tptr].data.num   = value;
 
             line->tptr += 1;
 
@@ -188,6 +205,9 @@ int AnalyseInput(line_t* line){
 
     TokensDump(line);
     DumpIds(line, stdout);
+
+    line->tptr = 0;
+
     return OK;
 }
 
@@ -204,8 +224,8 @@ static int ProccessName(line_t* line, int idLen){
             nodeId = CreateId(line, line->buffer + line->ptr - idLen, idLen + 1);
         }
 
-        line->tokens[line->tptr].type = T_ID;
-        line->tokens[line->tptr].data = nodeId;
+        line->tokens[line->tptr].type    = T_ID;
+        line->tokens[line->tptr].data.id = nodeId;
 
         line->tptr += 1;
 
@@ -213,8 +233,8 @@ static int ProccessName(line_t* line, int idLen){
 
     else{
 
-        line->tokens[line->tptr].type = T_OPR;
-        line->tokens[line->tptr].data = nodeOp;
+        line->tokens[line->tptr].type    = T_OPR;
+        line->tokens[line->tptr].data.op = nodeOp;
 
         line->tptr += 1;
 
@@ -261,7 +281,7 @@ static int SkipSpaces(line_t* line){
 }
 
 /*========================================================================*/
-
+//DEPRECATED
 static double ProcessWord(char* word, int length, int* type){
     double value = 0;
 
@@ -281,12 +301,12 @@ static int FindOp(char* word, int length){
 }
 
 /*========================================================================*/
-
+//DEPRECATED
 static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* right){
     node_t* newNode = (node_t*)calloc(1, sizeof(*newNode));
 
-    newNode->data   = data;
-    newNode->type   = type;
+    newNode->data.num = data;
+    newNode->type    = type;
 
     newNode->left   = left;
     newNode->right  = right;
@@ -303,19 +323,19 @@ static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* r
 /*========================================================================*/
 
 static int SyntaxError(line_t* line, int param){
-    printf(PNK "Syntax error in " ORG "\'%c\'\n" RESET, line->buffer[line->ptr]);
+    printf(PNK "Syntax error in " ORG "\'%llu\'\n" RESET, line->tptr);
 
     switch (param){
         case S_TRMNL:
-            printf(PNK "expected '$' at " CYN "<%llu> '%c'\n" RESET, line->ptr, line->buffer[line->ptr]);
+            printf(PNK "expected '$' at " CYN "<%llu>\n" RESET, line->tptr);
             break;
 
         case S_NUM:
-            printf(PNK "expected 'num' at " CYN "<%llu> '%c'\n" RESET, line->ptr, line->buffer[line->ptr]);
+            printf(PNK "expected 'num' at " CYN "<%llu>\n" RESET, line->tptr);
             break;
 
         case S_BRCKT:
-            printf(PNK "expected ')' at " CYN "<%llu> '%c'\n" RESET, line->ptr, line->buffer[line->ptr]);
+            printf(PNK "expected ')' at " CYN "<%llu>\n" RESET, line->tptr);
             break;
     }
 
@@ -332,43 +352,45 @@ static int SyntaxError(line_t* line, int param){
 
 static node_t* GetG(line_t* line){
     node_t* node = GetE(line);
-    if (line->buffer[line->ptr] != '$') SyntaxError(line, S_TRMNL);
+
+    if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_TRM) SyntaxError(line, S_TRMNL);
 
     return node;
 }
 
-static node_t* GetN(line_t* line){
-    int old_p = line->ptr;
-    int val = 0;
-
-    while('0' <= line->buffer[line->ptr] && line->buffer[line->ptr] <= '9'){
-        val = val * 10 + line->buffer[line->ptr] - '0';
-        line->ptr++;
-    }
-
-    if (old_p == line->ptr) SyntaxError(line, S_NUM);
-
-    node_t* newNode = NewNode(line->tree, val, T_NUM, nullptr, nullptr);
-
-    return newNode;
-}
+//DEPRECATED
+// static node_t* GetId(line_t* line){
+//     int old_p = line->ptr;
+//     int val = 0;
+//
+//     while('0' <= line->buffer[line->ptr] && line->buffer[line->ptr] <= '9'){
+//         val = val * 10 + line->buffer[line->ptr] - '0';
+//         line->ptr++;
+//     }
+//
+//     if (old_p == line->ptr) SyntaxError(line, S_NUM);
+//
+//     node_t* newNode = NewNode(line->tree, val, T_NUM, nullptr, nullptr);
+//
+//     return newNode;
+// }
 
 static node_t* GetE(line_t* line){
     node_t* left = GetT(line);
 
-    while (line->buffer[line->ptr] == '+' || line->buffer[line->ptr] == '-'){
-        int op = line->buffer[line->ptr];
-        line->ptr++;
+    int op = line->tokens[line->tptr].data.op;
+    while (line->tokens[line->tptr].type == T_OPR && (op == O_ADD || op == O_SUB)){
+        node_t* opNode  = line->tokens + line->tptr;
+        line->tptr++;
 
         node_t* right = GetT(line);
 
-        if      (op == '+'){
-            left = NewNode(line->tree, O_ADD, T_OPR, left, right);
-        }
+        opNode->left  = left;
+        opNode->right = right;
 
-        else if (op == '-'){
-            left = NewNode(line->tree, O_SUB, T_OPR, left, right);
-        }
+        left = opNode;
+
+        op = line->tokens[line->tptr].data.op;
     }
 
     return left;
@@ -377,80 +399,80 @@ static node_t* GetE(line_t* line){
 static node_t* GetT(line_t* line){
     node_t* left = GetP(line);
 
-    while (line->buffer[line->ptr] == '*' || line->buffer[line->ptr] == '/'){
-        int op = line->buffer[line->ptr];
-        line->ptr++;
+    int op = line->tokens[line->tptr].data.op;
+    while (line->tokens[line->tptr].type == T_OPR && (op == O_MUL || op == O_DIV)){
+        node_t* opNode  = line->tokens + line->tptr;
+        line->tptr++;
 
         node_t* right = GetP(line);
 
-        if      (op == '*'){
-            left = NewNode(line->tree, O_MUL, T_OPR, left, right);
-        }
+        opNode->left  = left;
+        opNode->right = right;
 
-        else if (op == '/'){
-            left = NewNode(line->tree, O_DIV, T_OPR, left, right);
-        }
+        left = opNode;
+
+        op = line->tokens[line->tptr].data.op;
     }
 
     return left;
 }
 
 static node_t* GetP(line_t* line){
-    if (line->buffer[line->ptr] == '('){
-        line->ptr++;
+    printf("getp:tptr:%d\n", line->tptr);
 
+    if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_OBR){
+        printf("first:%d\n", line->tptr);
+        line->tptr++;
         node_t* node = GetE(line);
-        if (line->buffer[line->ptr] != ')') SyntaxError(line, S_BRCKT);
 
-        line->ptr++;
+        //printf("tptr:%d, data:%d\n", line->tptr, line->tokens[line->tptr].data.op);
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
+
+        line->tptr++;
 
         return node;
     }
 
-    else if (line->buffer[line->ptr] == 'x' && !isalpha(line->buffer[line->ptr + 1])){
-        line->ptr++;
+    else if (line->tokens[line->tptr].type == T_ID && line->tokens[line->tptr + 1].type == T_OPR && line->tokens[line->tptr + 1].data.op == O_OBR){
+        node_t* nodeId = line->tokens + line->tptr;
 
-        return NewNode(line->tree, 'x', T_ID, nullptr, nullptr);
+        line->tptr++;
+        line->tptr++;
+
+        node_t* nodeE = GetE(line);
+
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
+
+        line->tptr++;
+
+        nodeId->right = nodeE;
+
+        return nodeId;
     }
 
-    else if (isdigit(line->buffer[line->ptr])){
-        return GetN(line);
+    else if (line->tokens[line->tptr].type == T_ID){
+        node_t* nodeId = line->tokens + line->tptr;
+
+        line->tptr++;
+
+        return nodeId;
     }
 
-    else{
-        int op = GetF(line);
-
-        if (line->buffer[line->ptr] == '('){
-            line->ptr++;
-
-            node_t* node = GetE(line);
-            if (line->buffer[line->ptr] != ')') SyntaxError(line, S_BRCKT);
-
-            line->ptr++;
-            node_t* newNode = NewNode(line->tree, op, T_OPR, nullptr, node);
-
-            return newNode;
-        }
+    else {
+        return GetNum(line);
     }
 }
 
-static int GetF(line_t* line){
-    int op = 0;
+static node_t* GetNum(line_t* line){
+    node_t* node = line->tokens + line->tptr;
 
-    if (!strncmp(line->buffer + line->ptr, "sin", 3)){
-        line->ptr += 3;
-        op = O_SIN;
+    if (node->type == T_NUM){
+        line->tptr += 1;
     }
 
-    else if (!strncmp(line->buffer + line->ptr, "cos", 3)){
-        line->ptr += 3;
-        op = O_COS;
+    else {
+        SyntaxError(line, S_NUM);
     }
 
-    else if (!strncmp(line->buffer + line->ptr, "tan", 3)){
-        line->ptr += 3;
-        op = O_TAN;
-    }
-
-    return op;
+    return node;
 }
