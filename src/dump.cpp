@@ -1,5 +1,7 @@
 #include "../hpp/dump.hpp"
 
+#define MEOW fprintf(stderr, PNK  "MEOW\n" RESET);
+
 const int64_t MAXDOT_BUFF    = 8;
 const int64_t MAXLEN_COMMAND = 64;
 const int64_t MAX_HTML_PRNT  = 1024;
@@ -132,9 +134,14 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
         else if (node->type == T_OPR){
             snprintf(outBuff, MAXDOT_BUFF, "%c", node->data.op);
 
+            char color[8] = {};
+
+            if (node->data.op == O_SEP) strcpy(color, "#eee6ff");
+            else                        strcpy(color, "#fff3e6");
+
             fprintf(line->files.dot,
-                "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#fff3e6\";label = \" { %0.3llu } | { oper: %s }\"];\n",
-                node->id, node->id, outBuff);
+                "\tnode%0.3llu [rankdir=LR; fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"%s\";label = \" { %0.3llu } | { oper: %s }\"];\n",
+                node->id, color, node->id, outBuff);
         }
 
         else if (node->type == T_ID){

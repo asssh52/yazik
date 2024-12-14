@@ -18,13 +18,13 @@ CXX = clang++
 run:      ./bin/main.o ./bin/front.o ./bin/dump.o
 	$(CXX) ./bin/main.o ./bin/front.o ./bin/dump.o $(CXXFLAGS) -o main
 
-./bin/main.o:  src/main.cpp
+./bin/main.o:  src/main.cpp hpp/ops.hpp
 	$(CXX) -c ./src/main.cpp $(CXXFLAGS) -o ./bin/main.o
 
-./bin/front.o: src/front.cpp hpp/front.hpp
+./bin/front.o: src/front.cpp hpp/front.hpp hpp/ops.hpp
 	$(CXX) -c ./src/front.cpp $(CXXFLAGS) -o ./bin/front.o
 
-./bin/dump.o: src/dump.cpp hpp/dump.hpp src/front.cpp hpp/front.hpp
+./bin/dump.o: src/dump.cpp hpp/dump.hpp src/front.cpp hpp/front.hpp hpp/ops.hpp
 	$(CXX) -c ./src/dump.cpp $(CXXFLAGS) -o ./bin/dump.o
 clean:
 	rm -f main ./bin/*.o ./bin/png/*.png

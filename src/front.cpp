@@ -19,46 +19,23 @@ enum syntaxExits{
 
     S_TRMNL   = 1,
     S_NUM     = 2,
-    S_BRCKT   = 3
-
-};
-
-enum nodeOperations{
-
-    O_ADD = 43,
-    O_SUB = 45,
-    O_MUL = 42,
-    O_DIV = 47,
-    O_SIN = 115,
-    O_COS = 99,
-    O_TAN = 116,
-    O_OBR = 40,
-    O_CBR = 41,
-    O_TRM = 36,
-
-};
-
-const opName_t opList[] = {
-
-    {"+",   O_ADD, 1},
-    {"-",   O_SUB, 1},
-    {"*",   O_MUL, 1},
-    {"/",   O_DIV, 1},
-    {"sin", O_SIN, 3},
-    {"cos", O_COS, 3},
-    {"tan", O_TAN, 3},
-    {"(",   O_OBR, 1},
-    {")",   O_CBR, 1},
-    {"$",   O_TRM, 1}
+    S_BRCKT   = 3,
+    S_ID      = 4,
+    S_EQL     = 5,
+    S_SEP     = 6,
+    S_OP      = 7,
+    S_IFC     = 8
 
 };
 
 static node_t*  GetNum          (line_t* line);
 static node_t*  GetG            (line_t* line);
+static node_t*  GetOp           (line_t* line);
 static node_t*  GetE            (line_t* line);
-static node_t*  GetT            (line_t* line);
 static node_t*  GetP            (line_t* line);
 static node_t*  GetId           (line_t* line);
+static node_t*  GetIf           (line_t* line);
+static node_t*  GetPrint        (line_t* line);
 static int      SyntaxError     (line_t* line, int param);
 
 static int      FillTokensId    (line_t* line);
@@ -126,7 +103,7 @@ int LineProcess(line_t* line){
 }
 
 /*========================================================================*/
-
+//LEXICAL
 int AnalyseInput(line_t* line){
     int   idLen   = 0;
     char* numEnd    = nullptr;
@@ -281,14 +258,6 @@ static int SkipSpaces(line_t* line){
 }
 
 /*========================================================================*/
-//DEPRECATED
-static double ProcessWord(char* word, int length, int* type){
-    double value = 0;
-
-    return value;
-}
-
-/*========================================================================*/
 
 static int FindOp(char* word, int length){
     for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
@@ -337,77 +306,219 @@ static int SyntaxError(line_t* line, int param){
         case S_BRCKT:
             printf(PNK "expected ')' at " CYN "<%llu>\n" RESET, line->tptr);
             break;
+
+        case S_ID:
+            printf(PNK "expected 'ID' at " CYN "<%llu>\n" RESET, line->tptr);
+            break;
+
+        case S_SEP:
+            printf(PNK "expected 'SEP' at " CYN "<%llu>\n" RESET, line->tptr);
+            break;
+
+        case S_OP:
+            printf(PNK "unknown operator at " CYN "<%llu>\n" RESET, line->tptr);
+            break;
+
+        case S_IFC:
+            printf(PNK "expected close operator at " CYN "<%llu>\n" RESET, line->tptr);
+            break;
     }
+
+    line->err = true;
 
     return 0;
 }
 
 /*========================================================================*/
-//LEXICAL
-
-
-
-/*========================================================================*/
 //GRAMMAR FUNCS
 
 static node_t* GetG(line_t* line){
-    node_t* node = GetE(line);
+    if (line->err == true) return 0;
+
+    node_t* node_left = GetOp(line);
+    if (!node_left) return 0;
+
+    if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+    node_t* nodeSep = line->tokens + line->tptr;
+    line->tptr += 1;
+
+    nodeSep->left     = node_left;
+    node_left->parent = nodeSep;
+
+    node_t* nodeSepReturn = nodeSep;
+
+    while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_TRM) || line->tokens[line->tptr].type == 0){
+        node_t* node_left = GetOp(line);
+        if (!node_left) return 0;
+
+        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+        nodeSep->right  = line->tokens + line->tptr;
+        line->tokens[line->tptr].parent = nodeSep;
+
+        nodeSep = line->tokens + line->tptr;
+        line->tptr += 1;
+
+        nodeSep->left     = node_left;
+        node_left->parent = nodeSep;
+    }
 
     if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_TRM) SyntaxError(line, S_TRMNL);
 
-    return node;
+    return nodeSepReturn;
 }
 
-//DEPRECATED
-// static node_t* GetId(line_t* line){
-//     int old_p = line->ptr;
-//     int val = 0;
-//
-//     while('0' <= line->buffer[line->ptr] && line->buffer[line->ptr] <= '9'){
-//         val = val * 10 + line->buffer[line->ptr] - '0';
-//         line->ptr++;
-//     }
-//
-//     if (old_p == line->ptr) SyntaxError(line, S_NUM);
-//
-//     node_t* newNode = NewNode(line->tree, val, T_NUM, nullptr, nullptr);
-//
-//     return newNode;
-// }
 
-static node_t* GetE(line_t* line){
-    node_t* left = GetT(line);
+static node_t* GetOp(line_t* line){
+    if (line->err == true) return 0;
 
-    int op = line->tokens[line->tptr].data.op;
-    while (line->tokens[line->tptr].type == T_OPR && (op == O_ADD || op == O_SUB)){
-        node_t* opNode  = line->tokens + line->tptr;
-        line->tptr++;
+    node_t* retNode = nullptr;
 
-        node_t* right = GetT(line);
+    if (line->tokens[line->tptr].type == T_ID){
 
-        opNode->left  = left;
-        opNode->right = right;
+        node_t* nodeId = GetId(line);
+        if (!nodeId) return 0;
 
-        left = opNode;
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_EQL){
+            node_t* nodeEq = line->tokens + line->tptr;
+            line->tptr += 1;
 
-        op = line->tokens[line->tptr].data.op;
+            node_t* nodeE = GetE(line);
+            if (!nodeE) return 0;
+
+            nodeEq->left   = nodeId;
+            nodeEq->right  = nodeE;
+            nodeE->parent  = nodeEq;
+            nodeId->parent = nodeEq;
+
+            retNode = nodeEq;
+        }
+
+        else if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_OBR){
+            line->tptr += 1;
+
+            node_t* nodeE = GetE(line);
+            if (!nodeE) return 0;
+
+            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
+            line->tptr += 1;
+
+            nodeId->left  = nodeE;
+            nodeE->parent = nodeId;
+
+            retNode = nodeId;
+        }
+
+        else SyntaxError(line, S_OP);
+
     }
 
-    return left;
+    else if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFB){
+
+        retNode = GetIf(line);
+        if (!retNode) return 0;
+
+    }
+
+    else{
+
+        retNode = GetPrint(line);
+        if (!retNode) return 0;
+    }
+
+    return retNode;
 }
 
-static node_t* GetT(line_t* line){
+static node_t* GetIf(line_t* line){
+    node_t* retNode = nullptr;
+
+    if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFB){
+        retNode = line->tokens + line->tptr;
+        line->tptr += 1;
+
+        node_t* node_left = GetOp(line);
+        if (!node_left) return 0;
+
+        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+        node_t* nodeSep = line->tokens + line->tptr;
+        line->tptr += 1;
+
+        nodeSep->left     = node_left;
+        node_left->parent = nodeSep;
+
+        node_t* nodeSepReturn = nodeSep;
+
+        while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFC)){
+            node_left = GetOp(line);
+            if (!node_left) return 0;
+
+            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+            nodeSep->right  = line->tokens + line->tptr;
+            line->tokens[line->tptr].parent = nodeSep;
+
+            nodeSep = line->tokens + line->tptr;
+            line->tptr += 1;
+
+            nodeSep->left     = node_left;
+            node_left->parent = nodeSep;
+        }
+
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFC){
+            line->tptr += 1;
+
+            node_t* nodeCondition = GetE(line);
+            if (!nodeCondition) return 0;
+
+            retNode->left         = nodeCondition;
+            nodeCondition->parent = retNode;
+
+            retNode->right = nodeSepReturn;
+            nodeSepReturn->parent = retNode;
+        }
+
+        else SyntaxError(line, S_IFC);
+
+    }
+
+    else SyntaxError(line, S_OP);
+
+    return retNode;
+}
+
+static node_t* GetPrint(line_t* line){
+    node_t* retNode = nullptr;
+
+    if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_PNT){
+        retNode = line->tokens + line->tptr;
+        line->tptr += 1;
+
+        node_t* nodeE = GetE(line);
+        if (!nodeE) return 0;
+
+        retNode->left = nodeE;
+        nodeE->parent = retNode;
+    }
+
+    return retNode;
+}
+
+static node_t* GetE(line_t* line){
+    if (line->err == true) return 0;
+
     node_t* left = GetP(line);
+    if (!left) return 0;
 
     int op = line->tokens[line->tptr].data.op;
-    while (line->tokens[line->tptr].type == T_OPR && (op == O_MUL || op == O_DIV)){
+    while (line->tokens[line->tptr].type == T_OPR && (op == O_ADD || op == O_SUB || op == O_MUL || op == O_DIV)){
         node_t* opNode  = line->tokens + line->tptr;
         line->tptr++;
 
         node_t* right = GetP(line);
+        if (!right) return 0;
 
         opNode->left  = left;
         opNode->right = right;
+        left->parent  = opNode;
+        right->parent = opNode;
 
         left = opNode;
 
@@ -418,12 +529,13 @@ static node_t* GetT(line_t* line){
 }
 
 static node_t* GetP(line_t* line){
-    printf("getp:tptr:%d\n", line->tptr);
+    if (line->err == true) return 0;
 
     if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_OBR){
-        printf("first:%d\n", line->tptr);
         line->tptr++;
+
         node_t* node = GetE(line);
+        if (!node) return 0;
 
         //printf("tptr:%d, data:%d\n", line->tptr, line->tokens[line->tptr].data.op);
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
@@ -434,12 +546,13 @@ static node_t* GetP(line_t* line){
     }
 
     else if (line->tokens[line->tptr].type == T_ID && line->tokens[line->tptr + 1].type == T_OPR && line->tokens[line->tptr + 1].data.op == O_OBR){
-        node_t* nodeId = line->tokens + line->tptr;
+        node_t* nodeId = GetId(line);
+        if (!nodeId) return 0;
 
-        line->tptr++;
         line->tptr++;
 
         node_t* nodeE = GetE(line);
+        if (!nodeE) return 0;
 
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
 
@@ -451,9 +564,8 @@ static node_t* GetP(line_t* line){
     }
 
     else if (line->tokens[line->tptr].type == T_ID){
-        node_t* nodeId = line->tokens + line->tptr;
-
-        line->tptr++;
+        node_t* nodeId = GetId(line);
+        if (!nodeId) return 0;
 
         return nodeId;
     }
@@ -463,7 +575,20 @@ static node_t* GetP(line_t* line){
     }
 }
 
+static node_t* GetId(line_t* line){
+    if (line->err == true) return 0;
+
+    node_t* node = line->tokens + line->tptr;
+
+    if (node->type != T_ID) SyntaxError(line, S_ID);
+    else line->tptr += 1;
+
+    return node;
+}
+
 static node_t* GetNum(line_t* line){
+    if (line->err == true) return 0;
+
     node_t* node = line->tokens + line->tptr;
 
     if (node->type == T_NUM){

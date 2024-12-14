@@ -5,8 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 #include "../hpp/colors.hpp"
+#include "../hpp/ops.hpp"
 
-const int     OP_LEN   = 8;
 const int64_t MAX_BUFF = 128;
 const int64_t MAX_TKNS = 32;
 const int64_t MAX_IDS  = 16;
@@ -19,18 +19,6 @@ enum nodeTypes{
 
 };
 
-
-
-typedef struct opName_t{
-
-    char    name[OP_LEN];
-    int     opNum;
-    int     len;
-
-} opName_t;
-
-
-
 typedef struct files{
 
     const char* inputName;
@@ -41,6 +29,9 @@ typedef struct files{
 
     const char* htmlName;
     FILE* html;
+
+    const char* saveName;
+    FILE* save;
 
 } files_t;
 
@@ -97,6 +88,8 @@ typedef struct line{
     files_t     files;
 
     tree_t*     tree;
+
+    bool        err;
 
 } line_t;
 
