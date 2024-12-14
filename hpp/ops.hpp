@@ -7,8 +7,17 @@ typedef struct opName_t{
     char    name[OP_LEN];
     int     opNum;
     int     len;
+    char    stdname[OP_LEN];
 
 } opName_t;
+
+enum nodeTypes{
+
+    T_NUM = 1,
+    T_ID  = 2,
+    T_OPR = 3
+
+};
 
 enum nodeOperations{
 
@@ -32,20 +41,28 @@ enum nodeOperations{
 
 const opName_t opList[] = {
 
-    {"+",       O_ADD, 1},
-    {"-",       O_SUB, 1},
-    {"*",       O_MUL, 1},
-    {"/",       O_DIV, 1},
-    {"=",       O_EQL, 1},
-    {"sin",     O_SIN, 3},
-    {"cos",     O_COS, 3},
-    {"tan",     O_TAN, 3},
-    {"(",       O_OBR, 1},
-    {")",       O_CBR, 1},
-    {"skibidi", O_IFB, 7},
-    {"ohio",    O_IFC, 4},
-    {"sigma",   O_PNT, 5},
-    {"@",       O_TRM, 1},
-    {"$",       O_SEP, 1}
+    {"+",       O_ADD, 1, "+"       },
+    {"-",       O_SUB, 1, "-"       },
+    {"*",       O_MUL, 1, "*"       },
+    {"/",       O_DIV, 1, "/"       },
+    {"=",       O_EQL, 1, "="       },
+    {"sin",     O_SIN, 3, "NAN"     },
+    {"cos",     O_COS, 3, "NAN"     },
+    {"tan",     O_TAN, 3, "NAN"     },
+    {"(",       O_OBR, 1, "NAN"     },
+    {")",       O_CBR, 1, "NAN"     },
+    {"skibidi", O_IFB, 7, "if"      },
+    {"ohio",    O_IFC, 4, "NAN"     },
+    {"sigma",   O_PNT, 5, "print"   },
+    {"@",       O_TRM, 1, "NAN"     },
+    {"$",       O_SEP, 1, ";"     }
+
+};
+
+const opName_t typeList[] = {
+
+    {"ID",     T_ID,  2, "NAN"},
+    {"NUM",    T_NUM, 3, "NAN"},
+    {"OP",     T_OPR, 2, "NAN"},
 
 };

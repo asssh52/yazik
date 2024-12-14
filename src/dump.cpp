@@ -2,10 +2,13 @@
 
 #define MEOW fprintf(stderr, PNK  "MEOW\n" RESET);
 
-const int64_t MAXDOT_BUFF    = 8;
-const int64_t MAXLEN_COMMAND = 64;
-const int64_t MAX_HTML_PRNT  = 1024;
+const int64_t MAXDOT_BUFF     = 8;
+const int64_t MAXLEN_COMMAND  = 64;
+const int64_t MAX_HTML_PRNT   = 1024;
 
+const int64_t MAX_READER_BUFF = 256;
+
+static int FindOpByNum      (int num);
 static int NodeDump         (line_t* line, node_t* node, int depth, int param);
 static int StartLineDump    (line_t* line);
 static int EndLineDump      (line_t* line);
@@ -13,6 +16,14 @@ static int DoDot            (line_t* line);
 static int HTMLGenerateBody (line_t* line);
 static int TokenDump        (line_t* line, node_t* node);
 static int HTMLPrint        (line_t* line, char* text);
+
+static int      LoadNode    (tree_t* tree, node_t* node, int param, FILE* file);
+static node_t*  NewNode     (tree_t* tree, int data, int type, node_t* left, node_t* right);
+
+static int      FindOpStd   (char* word);
+static int      FindType    (char* word);
+
+const int NAN = -1;
 
 enum errors_dump{
 
@@ -28,6 +39,9 @@ enum dump_params{
 
 };
 
+
+/*========================================================================*/
+
 int TreeDump(line_t* line){
 
     StartLineDump(line);
@@ -39,11 +53,13 @@ int TreeDump(line_t* line){
     return OK;
 }
 
+/*========================================================================*/
+
 int TokensDump(line_t* line){
 
     StartLineDump(line);
 
-    for (int i = 0; i < MAX_TKNS; i++){
+    for (int i = 0; i < MAX_TKNS_DMP; i++){
         TokenDump(line, line->tokens + i);
     }
 
@@ -68,6 +84,8 @@ int TokensDump(line_t* line){
     return OK;
 }
 
+/*========================================================================*/
+
 int DumpIds(line_t* line, FILE* file){
     fprintf(file, ORG "\n-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n" RESET);
     fprintf(file, "Nametable dump:\n\n");
@@ -84,6 +102,210 @@ int DumpIds(line_t* line, FILE* file){
 
     return OK;
 }
+
+/*========================================================================*/
+
+//READER
+//READER
+//READER
+
+int LoadTree(line_t* line){
+
+    LoadNode(line->tree, line->tree->root, ROOT, line->files.save);
+
+    TreeDump(line);
+    return OK;
+}
+
+static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
+    char value_type_char[MAX_READER_BUFF] = {};
+    char value_char[MAX_READER_BUFF] = {};
+
+    char* strtodRet = 0;
+
+    int     value_type = 0;
+    double  value = 0;
+
+    int offset_len = 0;
+
+    node_t* newNode = nullptr;
+    char buffer[MAX_READER_BUFF] = {};
+    char bracket = 0;
+
+    //printf("node:%p\n", node);
+
+    if (param == ROOT){
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            fscanf(file, "%[^:]:\"%[^\"]\"%n", value_type_char, value_char, &offset_len);
+            value_type = FindType(value_type_char);
+
+            if (value_type == T_NUM) value = strtod(value_char, &strtodRet);
+            if (value_type == T_ID)  value = 1;
+            if (value_type == T_OPR)  value = FindOpStd(value_char);
+
+            tree->root = NewNode(tree, value, value_type, nullptr, nullptr);
+        }
+        else return 0;
+
+
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            ungetc(bracket, file);
+            LoadNode(tree, tree->root, LEFT, file);
+        }
+
+        LoadNode(tree, tree->root, RIGHT, file);
+        return OK;
+    }
+
+    else if (param == LEFT){
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            fscanf(file, "%[^:]:\"%[^\"]\"%n", value_type_char, value_char, &offset_len);
+
+            printf("type:%s\n", value_type_char);
+
+            value_type = FindType(value_type_char);
+
+            printf("type:%d\n", value_type);
+
+            if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
+            if (value_type == T_ID)   value = 1;
+            if (value_type == T_OPR)  value = FindOpStd(value_char);
+            newNode = NewNode(tree, value, value_type, nullptr, nullptr);
+
+            node->left = newNode;
+            newNode->parent = node;
+        }
+        else return 0;
+
+
+
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            ungetc(bracket, file);
+            LoadNode(tree, newNode, LEFT, file);
+        }
+
+        LoadNode(tree, node, RIGHT, file);
+
+        return OK;
+    }
+
+    else if (param == RIGHT){
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            fscanf(file, "%[^:]:\"%[^\"]\"%n", value_type_char, value_char, &offset_len);
+
+            printf("type:%s\n", value_type_char);
+
+            value_type = FindType(value_type_char);
+
+            printf("type:%d\n", value_type);
+
+            if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
+            if (value_type == T_ID)   value = 1;
+            if (value_type == T_OPR)  value = FindOpStd(value_char);
+            newNode = NewNode(tree, value, value_type, nullptr, nullptr);
+
+            node->right = newNode;
+            newNode->parent = node;
+        }
+        else return OK;
+
+
+
+        fscanf(file, "%[^{}]", buffer);
+        bracket = getc(file);
+
+        if (bracket == '{'){
+            ungetc(bracket, file);
+            LoadNode(tree, newNode, LEFT, file);
+        }
+
+        LoadNode(tree, newNode, RIGHT, file);
+        return OK;
+    }
+}
+
+int FindOp(char* word, int length){
+    for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
+        if (opList[i].len == length && !strncmp(word, opList[i].name, length)){
+            return opList[i].opNum;
+        }
+    }
+
+    return NAN;
+}
+
+static int FindOpStd(char* word){
+    for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
+        if (!strncmp(word, opList[i].stdname, 2)){
+            return opList[i].opNum;
+        }
+    }
+
+    return NAN;
+}
+
+static int FindType(char* word){
+    for (int i = 0; i < sizeof(typeList) / sizeof(typeList[0]); i++){
+        if (!strncmp(word, typeList[i].name, 2)){
+            return typeList[i].opNum;
+        }
+    }
+
+    return NAN;
+}
+
+static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* right){
+    node_t* newNode = (node_t*)calloc(1, sizeof(*newNode));
+
+    if (type == T_NUM) newNode->data.num = data;
+    if (type == T_OPR) newNode->data.op  = data;
+    if (type == T_ID)  newNode->data.id  = data;
+    newNode->type    = type;
+
+    newNode->left   = left;
+    newNode->right  = right;
+
+    if (left)  left->parent  = newNode;
+    if (right) right->parent = newNode;
+
+    newNode->id = tree->numElem;
+    tree->numElem += 1;
+
+    return newNode;
+}
+
+//READER_END
+//READER_END
+//READER_END
+
+/*========================================================================*/
+
+static int FindOpByNum(int opNum){
+    for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
+        if (opNum == opList[i].opNum){
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/*========================================================================*/
 
 static int TokenDump(line_t* line, node_t* node){
     char outBuff[MAXDOT_BUFF] = {};
@@ -119,6 +341,8 @@ static int TokenDump(line_t* line, node_t* node){
     return OK;
 }
 
+/*========================================================================*/
+
 static int NodeDump(line_t* line, node_t* node, int depth, int param){
     if (!node) return OK;
 
@@ -132,7 +356,9 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
         }
 
         else if (node->type == T_OPR){
-            snprintf(outBuff, MAXDOT_BUFF, "%c", node->data.op);
+            int opNum = FindOpByNum(node->data.op);
+
+            snprintf(outBuff, MAXDOT_BUFF, "%s", opList[opNum].stdname);
 
             char color[8] = {};
 
@@ -209,6 +435,8 @@ static int NodeDump(line_t* line, node_t* node, int depth, int param){
     return OK;
 }
 
+/*========================================================================*/
+
 static int StartLineDump(line_t* line){
 
     line->files.dot = fopen("./bin/dot.dot", "w");
@@ -221,6 +449,8 @@ static int StartLineDump(line_t* line){
     return OK;
 }
 
+/*========================================================================*/
+
 static int EndLineDump(line_t* line){
 
     fprintf(line->files.dot, "}\n");
@@ -229,6 +459,8 @@ static int EndLineDump(line_t* line){
 
     return OK;
 }
+
+/*========================================================================*/
 
 static int DoDot(line_t* line){
     char command[MAXLEN_COMMAND]   = {};
@@ -245,6 +477,8 @@ static int DoDot(line_t* line){
     return OK;
 }
 
+/*========================================================================*/
+
 int HTMLGenerateHead(line_t* line){
     fprintf(line->files.html, "<html>\n");
 
@@ -255,6 +489,8 @@ int HTMLGenerateHead(line_t* line){
 
     return OK;
 }
+
+/*========================================================================*/
 
 static int HTMLGenerateBody(line_t* line){
     fprintf(line->files.html, "<div style=\"text-align: center;\">\n");
@@ -269,6 +505,8 @@ static int HTMLGenerateBody(line_t* line){
     return OK;
 }
 
+/*========================================================================*/
+
 static int HTMLPrint(line_t* line, char* text){
     fprintf(line->files.html, "<div style=\"text-align: left;\">\n");
 
@@ -278,6 +516,8 @@ static int HTMLPrint(line_t* line, char* text){
 
     return OK;
 }
+
+/*========================================================================*/
 
 int HTMLDumpGenerate(line_t* line){
 

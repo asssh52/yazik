@@ -1,17 +1,23 @@
 #include "../hpp/front.hpp"
 #include "../hpp/dump.hpp"
+#include "../hpp/back.hpp"
 
 int main(){
     line_t line = {};
 
 
     LineCtor(&line);
-    LineRead(&line);
+//     LineRead(&line);
     HTMLGenerateHead(&line);
+//
+//     AnalyseInput(&line);
+//
+//     LineProcess(&line);
+//     LineSave(&line);
 
-    AnalyseInput(&line);
-
-    LineProcess(&line);
+    FILE* file = fopen("save.txt", "r");
+    line.files.save = file;
+    LoadTree(&line);
     HTMLDumpGenerate(&line);
 
 
