@@ -18,6 +18,9 @@ typedef struct files{
     const char* saveName;
     FILE* save;
 
+    const char* outName;
+    FILE* out;
+
 } files_t;
 
 typedef union data_t{

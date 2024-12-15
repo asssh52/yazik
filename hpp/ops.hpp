@@ -54,8 +54,8 @@ const opName_t opList[] = {
     {"skibidi", O_IFB, 7, "if"      },
     {"ohio",    O_IFC, 4, "NAN"     },
     {"sigma",   O_PNT, 5, "print"   },
-    {"@",       O_TRM, 1, "NAN"     },
-    {"$",       O_SEP, 1, ";"     }
+    {"@",       O_TRM, 1, "terml"},
+    {"$",       O_SEP, 1, ";"       }
 
 };
 

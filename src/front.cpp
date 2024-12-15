@@ -39,7 +39,6 @@ static node_t*  GetIf           (line_t* line);
 static node_t*  GetPrint        (line_t* line);
 static int      SyntaxError     (line_t* line, int param);
 
-static int      FindOpByNum     (int num);
 static int      NodeSave        (line_t* line, node_t* node, int depth, FILE* file);
 
 static int      FillTokensId    (line_t* line);
@@ -125,18 +124,6 @@ static int NodeSave(line_t* line, node_t* node, int depth, FILE* file){
     fprintf(file, "}\n");
 
     return OK;
-}
-
-/*========================================================================*/
-
-static int FindOpByNum(int opNum){
-    for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
-        if (opNum == opList[i].opNum){
-            return i;
-        }
-    }
-
-    return NAN;
 }
 
 /*========================================================================*/

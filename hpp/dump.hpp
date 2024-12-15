@@ -4,7 +4,7 @@
 #include "../hpp/colors.hpp"
 #include "../hpp/ops.hpp"
 
-const int MAX_TKNS_DMP = 32;
+const int MAX_TKNS_DMP = 64;
 
 enum readerParams{
     ROOT  = 1,
@@ -21,4 +21,5 @@ int DumpIds             (line_t* line, FILE* file);
 
 int LoadTree            (line_t* line);
 int FindOp              (char* word, int length);
-
+int FindOpStd           (char* word);
+int FindOpByNum         (int num);

@@ -8,7 +8,7 @@ const int64_t MAX_HTML_PRNT   = 1024;
 
 const int64_t MAX_READER_BUFF = 256;
 
-static int FindOpByNum      (int num);
+
 static int NodeDump         (line_t* line, node_t* node, int depth, int param);
 static int StartLineDump    (line_t* line);
 static int EndLineDump      (line_t* line);
@@ -20,7 +20,6 @@ static int HTMLPrint        (line_t* line, char* text);
 static int      LoadNode    (tree_t* tree, node_t* node, int param, FILE* file);
 static node_t*  NewNode     (tree_t* tree, int data, int type, node_t* left, node_t* right);
 
-static int      FindOpStd   (char* word);
 static int      FindType    (char* word);
 
 const int NAN = -1;
@@ -110,7 +109,6 @@ int DumpIds(line_t* line, FILE* file){
 //READER
 
 int LoadTree(line_t* line){
-
     LoadNode(line->tree, line->tree->root, ROOT, line->files.save);
 
     TreeDump(line);
@@ -143,7 +141,7 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
             value_type = FindType(value_type_char);
 
             if (value_type == T_NUM) value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)  value = 1;
+            if (value_type == T_ID)  value = value_char[0];
             if (value_type == T_OPR)  value = FindOpStd(value_char);
 
             tree->root = NewNode(tree, value, value_type, nullptr, nullptr);
@@ -177,7 +175,7 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
             printf("type:%d\n", value_type);
 
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)   value = 1;
+            if (value_type == T_ID)   value = value_char[0];
             if (value_type == T_OPR)  value = FindOpStd(value_char);
             newNode = NewNode(tree, value, value_type, nullptr, nullptr);
 
@@ -215,7 +213,7 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
             printf("type:%d\n", value_type);
 
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)   value = 1;
+            if (value_type == T_ID)   value = value_char[0];
             if (value_type == T_OPR)  value = FindOpStd(value_char);
             newNode = NewNode(tree, value, value_type, nullptr, nullptr);
 
@@ -237,6 +235,8 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
         LoadNode(tree, newNode, RIGHT, file);
         return OK;
     }
+
+    return OK;
 }
 
 int FindOp(char* word, int length){
@@ -249,7 +249,7 @@ int FindOp(char* word, int length){
     return NAN;
 }
 
-static int FindOpStd(char* word){
+int FindOpStd(char* word){
     for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
         if (!strncmp(word, opList[i].stdname, 2)){
             return opList[i].opNum;
@@ -295,7 +295,7 @@ static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* r
 
 /*========================================================================*/
 
-static int FindOpByNum(int opNum){
+int FindOpByNum(int opNum){
     for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
         if (opNum == opList[i].opNum){
             return i;

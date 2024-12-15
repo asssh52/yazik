@@ -8,7 +8,7 @@
 
 
 const int64_t MAX_BUFF = 128;
-const int64_t MAX_TKNS = 32;
+const int64_t MAX_TKNS = 64;
 const int64_t MAX_IDS  = 16;
 
 

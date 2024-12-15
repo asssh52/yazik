@@ -1,0 +1,12 @@
+x = 7$
+y = 3$
+sigma x + y$
+
+skibidi sigma x$
+sigma y$
+	ohio x - 7$
+
+skibidi sigma x$
+sigma y$
+	ohio x - 6$
+@

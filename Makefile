@@ -15,7 +15,7 @@ CXX_FLAGS = -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 CXX = clang++
 
 
-run:      ./bin/main.o ./bin/front.o ./bin/dump.o
+front:    ./bin/main.o ./bin/front.o ./bin/dump.o
 	$(CXX) ./bin/main.o ./bin/front.o ./bin/dump.o $(CXXFLAGS) -o main
 
 ./bin/main.o:  src/main.cpp hpp/ops.hpp
@@ -26,5 +26,17 @@ run:      ./bin/main.o ./bin/front.o ./bin/dump.o
 
 ./bin/dump.o: src/dump.cpp hpp/dump.hpp src/front.cpp hpp/front.hpp hpp/ops.hpp
 	$(CXX) -c ./src/dump.cpp $(CXXFLAGS) -o ./bin/dump.o
+
+back: ./bin/back.o ./bin/dump.o
+	$(CXX) ./bin/back.o ./bin/dump.o $(CXXFLAGS) -o back
+
+./bin/back.o:  src/back.cpp hpp/back.hpp
+	$(CXX) -c ./src/back.cpp $(CXXFLAGS) -o ./bin/back.o
+
+format: ./bin/format.o ./bin/dump.o
+	$(CXX) ./bin/format.o ./bin/dump.o $(CXXFLAGS) -o format
+
+./bin/format.o:  src/front-1.cpp hpp/front-1.hpp
+	$(CXX) -c ./src/front-1.cpp $(CXXFLAGS) -o ./bin/format.o
 clean:
 	rm -f main ./bin/*.o ./bin/png/*.png
