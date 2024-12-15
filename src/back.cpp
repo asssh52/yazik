@@ -70,6 +70,8 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     if (node->type == T_OPR) fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
 
+
+    // =
     if (node->type == T_OPR && node->data.op == O_EQL){
 
         NodeProcess(line, node->right, EQL);
@@ -77,7 +79,8 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     }
 
-    else if(node->type == T_OPR && node->data.op == O_IFB){
+    // IF
+    else if(node->type == T_OPR && node->data.op == O_WHB){
 
         NodeProcess(line, node->left, DFLT);
 
@@ -89,6 +92,24 @@ static int NodeProcess(line_t* line, node_t* node, int param){
         fprintf(line->files.out, "end_if%llu: \t\t#%llu\n", node->id, node->id);
     }
 
+    // WHILE
+    else if(node->type == T_OPR && node->data.op == O_WHB){
+
+        fprintf(line->files.out, "while%llu: \t\t#%llu\n", node->id, node->id);
+
+        NodeProcess(line, node->left, DFLT);
+
+        fprintf(line->files.out, "push 0 \t\t\t#%llu\n", node->id);
+        fprintf(line->files.out, "je end_while%llu: \t#%llu\n", node->id, node->id);
+
+        NodeProcess(line, node->right, DFLT);
+
+        fprintf(line->files.out, "jmp while%llu: \t\t#%llu\n", node->id, node->id);
+        fprintf(line->files.out, "end_while%llu: \t\t#%llu\n", node->id, node->id);
+
+    }
+
+    // OTHER
     else{
         if (node->left)   NodeProcess(line, node->left, DFLT);
         if (node->right)  NodeProcess(line, node->right, DFLT);
@@ -147,6 +168,10 @@ static int NodeProcess(line_t* line, node_t* node, int param){
                 break;
 
             case O_IFB:
+                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                break;
+
+            case O_WHB:
                 fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
                 break;
 

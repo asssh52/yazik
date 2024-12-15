@@ -17,10 +17,11 @@ static int HTMLGenerateBody (line_t* line);
 static int TokenDump        (line_t* line, node_t* node);
 static int HTMLPrint        (line_t* line, char* text);
 
-static int      LoadNode    (tree_t* tree, node_t* node, int param, FILE* file);
+static int      LoadNode    (line_t* line, node_t* node, int param, FILE* file);
 static node_t*  NewNode     (tree_t* tree, int data, int type, node_t* left, node_t* right);
 
 static int      FindType    (char* word);
+static int      ProccessId  (line_t* line, char* word, int len);
 
 const int NAN = -1;
 
@@ -109,13 +110,13 @@ int DumpIds(line_t* line, FILE* file){
 //READER
 
 int LoadTree(line_t* line){
-    LoadNode(line->tree, line->tree->root, ROOT, line->files.save);
+    LoadNode(line, line->tree->root, ROOT, line->files.save);
 
     TreeDump(line);
     return OK;
 }
 
-static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
+static int LoadNode(line_t* line, node_t* node, int param, FILE* file){
     char value_type_char[MAX_READER_BUFF] = {};
     char value_char[MAX_READER_BUFF] = {};
 
@@ -141,10 +142,10 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
             value_type = FindType(value_type_char);
 
             if (value_type == T_NUM) value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)  value = value_char[0];
-            if (value_type == T_OPR)  value = FindOpStd(value_char);
+            if (value_type == T_ID)  value = ProccessId(line, value_char, offset_len - 5);
+            if (value_type == T_OPR) value = FindOpStd(value_char);
 
-            tree->root = NewNode(tree, value, value_type, nullptr, nullptr);
+            line->tree->root = NewNode(line->tree, value, value_type, nullptr, nullptr);
         }
         else return 0;
 
@@ -154,10 +155,10 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
 
         if (bracket == '{'){
             ungetc(bracket, file);
-            LoadNode(tree, tree->root, LEFT, file);
+            LoadNode(line, line->tree->root, LEFT, file);
         }
 
-        LoadNode(tree, tree->root, RIGHT, file);
+        LoadNode(line, line->tree->root, RIGHT, file);
         return OK;
     }
 
@@ -168,16 +169,14 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
         if (bracket == '{'){
             fscanf(file, "%[^:]:\"%[^\"]\"%n", value_type_char, value_char, &offset_len);
 
-            printf("type:%s\n", value_type_char);
+            printf(RED "word:%s, len:%d\n" RESET, value_char, offset_len - 5);
 
             value_type = FindType(value_type_char);
 
-            printf("type:%d\n", value_type);
-
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)   value = value_char[0];
+            if (value_type == T_ID)   value = ProccessId(line, value_char, offset_len - 5);
             if (value_type == T_OPR)  value = FindOpStd(value_char);
-            newNode = NewNode(tree, value, value_type, nullptr, nullptr);
+            newNode = NewNode(line->tree, value, value_type, nullptr, nullptr);
 
             node->left = newNode;
             newNode->parent = node;
@@ -191,10 +190,10 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
 
         if (bracket == '{'){
             ungetc(bracket, file);
-            LoadNode(tree, newNode, LEFT, file);
+            LoadNode(line, newNode, LEFT, file);
         }
 
-        LoadNode(tree, node, RIGHT, file);
+        LoadNode(line, node, RIGHT, file);
 
         return OK;
     }
@@ -213,9 +212,9 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
             printf("type:%d\n", value_type);
 
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
-            if (value_type == T_ID)   value = value_char[0];
+            if (value_type == T_ID)   value = ProccessId(line, value_char, offset_len - 5);
             if (value_type == T_OPR)  value = FindOpStd(value_char);
-            newNode = NewNode(tree, value, value_type, nullptr, nullptr);
+            newNode = NewNode(line->tree, value, value_type, nullptr, nullptr);
 
             node->right = newNode;
             newNode->parent = node;
@@ -229,10 +228,10 @@ static int LoadNode(tree_t* tree, node_t* node, int param, FILE* file){
 
         if (bracket == '{'){
             ungetc(bracket, file);
-            LoadNode(tree, newNode, LEFT, file);
+            LoadNode(line, newNode, LEFT, file);
         }
 
-        LoadNode(tree, newNode, RIGHT, file);
+        LoadNode(line, newNode, RIGHT, file);
         return OK;
     }
 
@@ -287,6 +286,38 @@ static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* r
     tree->numElem += 1;
 
     return newNode;
+}
+
+static int ProccessId(line_t* line, char* word, int len){
+    int id = FindId(line, word, len);
+    printf(GRN "id:%d\n" RESET, id);
+    printf(GRN "id:%c\n" RESET, word[0]);
+
+    if (id == NAN) id = CreateId(line, word, len);
+
+    return id;
+}
+
+int FindId(line_t* line, char* word, int len){
+    for (int i = 0; i < line->numId; i++){
+        if (line->id[i].len == len && !strncmp(word, line->id[i].name, len)){
+            return i;
+        }
+    }
+
+    return NAN;
+}
+
+int CreateId(line_t* line, char* word, int len){
+    char* buff = (char*)calloc(len, sizeof(*buff));
+    strncpy(buff, word, len);
+
+    line->id[line->numId].name = buff;
+    line->id[line->numId].len  = len;
+
+    line->numId += 1;
+
+    return line->numId - 1;
 }
 
 //READER_END

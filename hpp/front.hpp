@@ -7,7 +7,7 @@
 #include "../hpp/ops.hpp"
 
 
-const int64_t MAX_BUFF = 128;
+const int64_t MAX_BUFF = 256;
 const int64_t MAX_TKNS = 64;
 const int64_t MAX_IDS  = 16;
 

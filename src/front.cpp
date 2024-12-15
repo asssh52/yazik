@@ -25,7 +25,8 @@ enum syntaxExits{
     S_EQL     = 5,
     S_SEP     = 6,
     S_OP      = 7,
-    S_IFC     = 8
+    S_IFC     = 8,
+    S_WHC     = 9
 
 };
 
@@ -37,6 +38,7 @@ static node_t*  GetP            (line_t* line);
 static node_t*  GetId           (line_t* line);
 static node_t*  GetIf           (line_t* line);
 static node_t*  GetPrint        (line_t* line);
+static node_t*  GetWhile        (line_t* line);
 static int      SyntaxError     (line_t* line, int param);
 
 static int      NodeSave        (line_t* line, node_t* node, int depth, FILE* file);
@@ -46,8 +48,6 @@ static int      FillTokensId    (line_t* line);
 static int      SkipSpaces      (line_t* line);
 
 static int      ProccessName    (line_t* line, int len);
-static int      FindId          (line_t* line, char* word, int len);
-static int      CreateId        (line_t* line, char* word, int len);
 
 static node_t*  NewNode         (tree_t* tree, int data, int type, node_t* left, node_t* right);
 
@@ -277,33 +277,10 @@ static int ProccessName(line_t* line, int idLen){
 
 /*========================================================================*/
 
-static int FindId(line_t* line, char* word, int len){
-    for (int i = 0; i < line->numId; i++){
-        if (line->id[i].len == len && !strncmp(word, line->id[i].name, len)){
-            return i;
-        }
-    }
-
-    return NAN;
-}
-
-/*========================================================================*/
-
-static int CreateId(line_t* line, char* word, int len){
-    line->id[line->numId].name = word;
-    line->id[line->numId].len  = len;
-
-    line->numId += 1;
-
-    return line->numId - 1;
-}
-
-/*========================================================================*/
-
 static int SkipSpaces(line_t* line){
     int skipped = 0;
 
-    while (line->buffer[line->ptr] == ' ' || line->buffer[line->ptr] == '\n'){
+    while (line->buffer[line->ptr] == ' ' || line->buffer[line->ptr] == '\n' || line->buffer[line->ptr] == '\t'){
         line->ptr++;
 
         skipped += 1;
@@ -311,13 +288,6 @@ static int SkipSpaces(line_t* line){
 
     return skipped;
 }
-
-/*========================================================================*/
-
-
-
-/*========================================================================*/
-//DEPRECATED
 
 /*========================================================================*/
 
@@ -350,7 +320,11 @@ static int SyntaxError(line_t* line, int param){
             break;
 
         case S_IFC:
-            printf(PNK "expected close operator at " CYN "<%llu>\n" RESET, line->tptr);
+            printf(PNK "expected 'if' close operator at " CYN "<%llu>\n" RESET, line->tptr);
+            break;
+
+        case S_WHC:
+            printf(PNK "expected 'while' close operator at " CYN "<%llu>\n" RESET, line->tptr);
             break;
     }
 
@@ -452,10 +426,18 @@ static node_t* GetOp(line_t* line){
 
     }
 
-    else{
+    else if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_PNT){
 
         retNode = GetPrint(line);
         if (!retNode) return 0;
+
+    }
+
+    else{
+
+        retNode = GetWhile(line);
+        if (!retNode) return 0;
+
     }
 
     return retNode;
@@ -534,6 +516,65 @@ static node_t* GetPrint(line_t* line){
         retNode->left = nodeE;
         nodeE->parent = retNode;
     }
+
+    return retNode;
+}
+
+static node_t* GetWhile(line_t* line){
+    node_t* retNode = nullptr;
+
+    if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_WHB){
+        retNode = line->tokens + line->tptr;
+        line->tptr += 1;
+        line->tree->numElem += 1;
+
+        node_t* node_left = GetOp(line);
+        if (!node_left) return 0;
+
+        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+        node_t* nodeSep = line->tokens + line->tptr;
+        line->tptr += 1;
+        line->tree->numElem += 1;
+
+        nodeSep->left     = node_left;
+        node_left->parent = nodeSep;
+
+        node_t* nodeSepReturn = nodeSep;
+
+        while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_WHC)){
+            node_left = GetOp(line);
+            if (!node_left) return 0;
+
+            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+            nodeSep->right  = line->tokens + line->tptr;
+            line->tokens[line->tptr].parent = nodeSep;
+
+            nodeSep = line->tokens + line->tptr;
+            line->tptr += 1;
+            line->tree->numElem += 1;
+
+            nodeSep->left     = node_left;
+            node_left->parent = nodeSep;
+        }
+
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_WHC){
+            line->tptr += 1;
+
+            node_t* nodeCondition = GetE(line);
+            if (!nodeCondition) return 0;
+
+            retNode->left         = nodeCondition;
+            nodeCondition->parent = retNode;
+
+            retNode->right = nodeSepReturn;
+            nodeSepReturn->parent = retNode;
+        }
+
+        else SyntaxError(line, S_WHC);
+
+    }
+
+    else SyntaxError(line, S_OP);
 
     return retNode;
 }

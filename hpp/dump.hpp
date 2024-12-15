@@ -23,3 +23,6 @@ int LoadTree            (line_t* line);
 int FindOp              (char* word, int length);
 int FindOpStd           (char* word);
 int FindOpByNum         (int num);
+
+int CreateId    (line_t* line, char* word, int len);
+int FindId      (line_t* line, char* word, int len);

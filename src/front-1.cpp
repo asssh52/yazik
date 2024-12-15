@@ -8,6 +8,7 @@ const char*   DFLT_OUT_FILE  = "autoformatted.txt";
 const char*   DFLT_DOT_FILE  = "./bin/dot.dot";
 
 const int64_t MAX_IDS  = 16;
+const int64_t BUFF_LEN = 16;
 
 enum errors{
 
@@ -27,6 +28,7 @@ int main(){
     FormaterCtor(line);
 
     LoadTree(line);
+    DumpIds(line, stdout);
 
     GenerateCode(line);
 
@@ -81,6 +83,18 @@ static int GenerateNode(line_t* line, node_t* node){
             GenerateNode(line, node->left);
         }
 
+        else if (node->data.op == O_WHB){
+            int opWHB = FindOpByNum(O_WHB);
+            fprintf(line->files.out, "\n%s ", opList[opWHB].name);
+
+            GenerateNode(line, node->right);
+
+            int opWHC = FindOpByNum(O_WHC);
+            fprintf(line->files.out, "\t%s ", opList[opWHC].name);
+
+            GenerateNode(line, node->left);
+        }
+
         else if (node->data.op == O_PNT){
             int opNum = FindOpByNum(node->data.op);
             fprintf(line->files.out, "%s ", opList[opNum].name);
@@ -107,7 +121,9 @@ static int GenerateNode(line_t* line, node_t* node){
     if (node->parent && (node->parent->right == node || node->parent->data.op == O_PNT)){
 
         if (node->type == T_ID){
-            fprintf(line->files.out, "%c", node->data.id);
+            char buffer[BUFF_LEN] = {};
+            snprintf(buffer, BUFF_LEN, "%s", line->id[node->data.id].name);
+            fprintf(line->files.out, "%s", buffer);
         }
 
         if (node->type == T_NUM){
@@ -119,7 +135,9 @@ static int GenerateNode(line_t* line, node_t* node){
     else{
 
         if (node->type == T_ID){
-            fprintf(line->files.out, "%c ", node->data.id);
+            char buffer[BUFF_LEN] = {};
+            snprintf(buffer, BUFF_LEN, "%s", line->id[node->data.id].name);
+            fprintf(line->files.out, "%s ", buffer);
         }
 
         if (node->type == T_NUM){
