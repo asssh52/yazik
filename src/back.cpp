@@ -20,12 +20,24 @@ enum params{
 
     DFLT = 0,
     EQL  = 1,
+    DEF  = 2
 
 };
 
-static int BackCtor     (line_t* line);
-static int BackProccess (line_t* line);
-static int NodeProcess  (line_t* line, node_t* node, int param);
+enum id_types{
+
+    GLOBAL = 103,
+    LOCAL  = 108,
+
+    VAR    = 118,
+    FUNC   = 102
+
+};
+
+static int BackCtor         (line_t* line);
+static int BackProccess     (line_t* line);
+static int NodeProcess      (line_t* line, node_t* node, int param);
+static int SetVariableTypes (line_t* line, node_t* node, int param);
 
 int main(){
     line_t* line = (line_t*)calloc(1, sizeof(*line));
@@ -33,6 +45,10 @@ int main(){
     BackCtor(line);
 
     LoadTree(line);
+
+    SetVariableTypes(line, line->tree->root, DFLT);
+
+    DumpIds(line, stdout);
 
     BackProccess(line);
 
@@ -68,19 +84,24 @@ static int BackProccess(line_t* line){
 
 static int NodeProcess(line_t* line, node_t* node, int param){
 
-    if (node->type == T_OPR) fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+    int type = node->type;
+    int op = node->data.op;
+
+    if (node->type == T_OPR){
+        fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+    }
 
 
     // =
-    if (node->type == T_OPR && node->data.op == O_EQL){
+    if (type == T_OPR && op == O_EQL){
 
-        NodeProcess(line, node->right, EQL);
+        NodeProcess(line, node->right, DFLT);
         NodeProcess(line, node->left, EQL);
 
     }
 
     // IF
-    else if(node->type == T_OPR && node->data.op == O_WHB){
+    else if(type == T_OPR && op == O_IFB){
 
         NodeProcess(line, node->left, DFLT);
 
@@ -93,7 +114,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     }
 
     // WHILE
-    else if(node->type == T_OPR && node->data.op == O_WHB){
+    else if(type == T_OPR && op == O_WHB){
 
         fprintf(line->files.out, "while%llu: \t\t#%llu\n", node->id, node->id);
 
@@ -109,26 +130,51 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     }
 
+    //DEF FUNC
+    else if(type == T_OPR && op == O_DEF){
+
+        fprintf(line->files.out, "jmp def_func_end%d: \t#%llu\n", node->left->left->data.id, node->id);
+        fprintf(line->files.out, "def_func%d: \t\t#%llu\n",       node->left->left->data.id, node->id);
+
+        NodeProcess(line, node->right, DFLT);
+
+        fprintf(line->files.out, "def_func_end%d: \t\t#%llu\n",   node->left->left->data.id, node->id);
+    }
+
+    //CALL
+    else if( type == T_OPR && op == O_CAL){
+
+        fprintf(line->files.out, "call def_func%d: \t\t#%llu\n",  node->left->left->data.id, node->id);
+
+    }
+
     // OTHER
+    else if (type == T_OPR && (op == O_ADD || op == O_SUB || op == O_DIV || op == O_MUL || op == O_LES || op == O_LSE || op == O_MOR || op == O_MRE || op == O_EQQ)){
+        if (node->right)  NodeProcess(line, node->right, DFLT);
+        if (node->left)   NodeProcess(line, node->left, DFLT);
+    }
+
     else{
         if (node->left)   NodeProcess(line, node->left, DFLT);
         if (node->right)  NodeProcess(line, node->right, DFLT);
     }
 
     // ID
-    if (node->type == T_ID && param == EQL){
-        fprintf(line->files.out, "pop [%d] \t\t#%llu\n", node->data.id, node->id);
+    if (type == T_ID && param == EQL){
+        fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        line->id[node->data.id].memAddr = line->freeAddr;
+        line->freeAddr += 1;
     }
 
-    else if (node->type == T_ID && param != EQL){
-        fprintf(line->files.out, "push [%d] \t\t#%llu\n", node->data.id, node->id);
+    else if (type == T_ID && param != EQL){
+        fprintf(line->files.out, "push [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
     }
     //ID
 
 
 
     // NUM
-    if (node->type == T_NUM){
+    if (type == T_NUM){
         fprintf(line->files.out, "push %lld \t\t\t#%llu\n", (int64_t)node->data.num, node->id);
     }
     // NUM
@@ -136,7 +182,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
 
     //OP
-    if (node->type == T_OPR){
+    if (type == T_OPR){
         switch (node->data.op){
 
             case O_ADD:
@@ -175,6 +221,38 @@ static int NodeProcess(line_t* line, node_t* node, int param){
                 fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
                 break;
 
+            case O_DEF:
+                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                break;
+
+            case O_RET:
+                fprintf(line->files.out, "ret \t\t\t#%llu\n", node->id);
+                break;
+
+            case O_CAL:
+                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                break;
+
+            case O_LES:
+                fprintf(line->files.out, "less\t\t#%llu\n", node->id);
+                break;
+
+            case O_LSE:
+                fprintf(line->files.out, "less_equal\t\t#%llu\n", node->id);
+                break;
+
+            case O_MOR:
+                fprintf(line->files.out, "more\t\t#%llu\n", node->id);
+                break;
+
+            case O_MRE:
+                fprintf(line->files.out, "more_equal\t\t#%llu\n", node->id);
+                break;
+
+            case O_EQQ:
+                fprintf(line->files.out, "equal\t\t#%llu\n", node->id);
+                break;
+
             default:
                 fprintf(line->files.out, "??? \t\t\t#%llu\n", node->id);
                 break;
@@ -182,6 +260,19 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     }
     //OP
 
+
+    return OK;
+}
+
+static int SetVariableTypes(line_t* line, node_t* node, int param){
+
+    if (node->type == T_ID){
+        if (param == DFLT) line->id[node->data.id].visibilityType = GLOBAL;
+        else               line->id[node->data.id].visibilityType = LOCAL;
+    }
+
+    if (node->left)  SetVariableTypes(line, node->left,  param);
+    if (node->right) SetVariableTypes(line, node->right, param);
 
     return OK;
 }

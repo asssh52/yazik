@@ -21,7 +21,7 @@ int DumpIds             (line_t* line, FILE* file);
 
 int LoadTree            (line_t* line);
 int FindOp              (char* word, int length);
-int FindOpStd           (char* word);
+int FindOpStd           (char* word, int len);
 int FindOpByNum         (int num);
 
 int CreateId    (line_t* line, char* word, int len);

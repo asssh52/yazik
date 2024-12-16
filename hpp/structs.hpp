@@ -58,16 +58,25 @@ typedef struct names_t{
     char*       name;
     uint64_t    len;
 
+    int         visibilityType; // global/local
+    int         idType;         // func/var
+    int         stackFrameSize; // for funcs
+
+    int         memAddr;
+
 } names_t;
 
 typedef struct line{
 
+    //SYNTAXIS
     char*       buffer;
     uint64_t    ptr;
 
+    //LEXICAL
     node_t*     tokens;
     uint64_t    tptr;
 
+    //NAMETABLE
     names_t*    id;
     uint64_t    numId;
 
@@ -75,6 +84,10 @@ typedef struct line{
 
     tree_t*     tree;
 
+    //BACKEND
+    int         freeAddr;
+
+    //LEXICAL
     bool        err;
 
 } line_t;

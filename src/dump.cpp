@@ -96,7 +96,10 @@ int DumpIds(line_t* line, FILE* file){
             fprintf(file, "%c", line->id[i].name[j]);
         }
 
-        fprintf(file, "\t len:%llu\n", line->id[i].len);
+        fprintf(file, "\t len:%llu",        line->id[i].len);
+        fprintf(file, "\t idType:%c",       line->id[i].idType);
+        fprintf(file, "\t visib:%c",        line->id[i].visibilityType);
+        fprintf(file, "\t frameSize:%d\n",    line->id[i].stackFrameSize);
     }
     fprintf(file, ORG "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n" RESET);
 
@@ -143,7 +146,7 @@ static int LoadNode(line_t* line, node_t* node, int param, FILE* file){
 
             if (value_type == T_NUM) value = strtod(value_char, &strtodRet);
             if (value_type == T_ID)  value = ProccessId(line, value_char, offset_len - 5);
-            if (value_type == T_OPR) value = FindOpStd(value_char);
+            if (value_type == T_OPR) value = FindOpStd(value_char, offset_len - 5);
 
             line->tree->root = NewNode(line->tree, value, value_type, nullptr, nullptr);
         }
@@ -175,7 +178,7 @@ static int LoadNode(line_t* line, node_t* node, int param, FILE* file){
 
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
             if (value_type == T_ID)   value = ProccessId(line, value_char, offset_len - 5);
-            if (value_type == T_OPR)  value = FindOpStd(value_char);
+            if (value_type == T_OPR)  value = FindOpStd(value_char, offset_len - 5);
             newNode = NewNode(line->tree, value, value_type, nullptr, nullptr);
 
             node->left = newNode;
@@ -213,7 +216,7 @@ static int LoadNode(line_t* line, node_t* node, int param, FILE* file){
 
             if (value_type == T_NUM)  value = strtod(value_char, &strtodRet);
             if (value_type == T_ID)   value = ProccessId(line, value_char, offset_len - 5);
-            if (value_type == T_OPR)  value = FindOpStd(value_char);
+            if (value_type == T_OPR)  value = FindOpStd(value_char, offset_len - 5);
             newNode = NewNode(line->tree, value, value_type, nullptr, nullptr);
 
             node->right = newNode;
@@ -248,9 +251,9 @@ int FindOp(char* word, int length){
     return NAN;
 }
 
-int FindOpStd(char* word){
+int FindOpStd(char* word, int len){
     for (int i = 0; i < sizeof(opList) / sizeof(opList[0]); i++){
-        if (!strncmp(word, opList[i].stdname, 2)){
+        if (len == opList[i].stdlen && !strncmp(word, opList[i].stdname, len)){
             return opList[i].opNum;
         }
     }
