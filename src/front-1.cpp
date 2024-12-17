@@ -57,7 +57,7 @@ static int FormaterCtor(line_t* line){
 static int GenerateCode(line_t* line){
     GenerateNode(line, line->tree->root);
 
-    char terminal[6] = "terml";
+    char terminal[9] = "terminal";
     int trmnl = FindOpByStd(terminal);
     printf("%d\n", trmnl);
     fprintf(line->files.out, "%s", opList[trmnl].name);

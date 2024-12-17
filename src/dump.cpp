@@ -6,7 +6,7 @@ const int64_t MAXDOT_BUFF     = 8;
 const int64_t MAXLEN_COMMAND  = 64;
 const int64_t MAX_HTML_PRNT   = 1024;
 
-const int64_t MAX_READER_BUFF = 256;
+const int64_t MAX_READER_BUFF = 2048;
 
 
 static int NodeDump         (line_t* line, node_t* node, int depth, int param);
@@ -99,7 +99,8 @@ int DumpIds(line_t* line, FILE* file){
         fprintf(file, "\t len:%llu",        line->id[i].len);
         fprintf(file, "\t idType:%c",       line->id[i].idType);
         fprintf(file, "\t visib:%c",        line->id[i].visibilityType);
-        fprintf(file, "\t frameSize:%d\n",    line->id[i].stackFrameSize);
+        fprintf(file, "\t frameSize:%d",    line->id[i].stackFrameSize);
+        fprintf(file, "\t memAddr:%d\n",    line->id[i].memAddr);
     }
     fprintf(file, ORG "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n" RESET);
 
@@ -293,8 +294,6 @@ static node_t* NewNode(tree_t* tree, int data, int type, node_t* left, node_t* r
 
 static int ProccessId(line_t* line, char* word, int len){
     int id = FindId(line, word, len);
-    printf(GRN "id:%d\n" RESET, id);
-    printf(GRN "id:%c\n" RESET, word[0]);
 
     if (id == NAN) id = CreateId(line, word, len);
 

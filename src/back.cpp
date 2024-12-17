@@ -37,7 +37,9 @@ enum id_types{
 static int BackCtor         (line_t* line);
 static int BackProccess     (line_t* line);
 static int NodeProcess      (line_t* line, node_t* node, int param);
-static int SetVariableTypes (line_t* line, node_t* node, int param);
+static int SetNameTypes (line_t* line, node_t* node);
+static int CreateAddr       (line_t* line, node_t* node);
+static int ProcessArgs      (line_t* line, node_t* node);
 
 int main(){
     line_t* line = (line_t*)calloc(1, sizeof(*line));
@@ -46,11 +48,13 @@ int main(){
 
     LoadTree(line);
 
-    SetVariableTypes(line, line->tree->root, DFLT);
-
+    SetNameTypes(line, line->tree->root);
+    MEOW
     DumpIds(line, stdout);
 
     BackProccess(line);
+
+    DumpIds(line, stdout);
 
     return 0;
 }
@@ -69,6 +73,8 @@ static int BackCtor(line_t* line){
     if (!line->files.out) line->files.out = fopen(DFLT_OUT_FILE, "w");
 
     line->files.dotName = DFLT_DOT_FILE;
+
+    line->freeAddr = 10;
 
     return OK;
 }
@@ -105,7 +111,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
         NodeProcess(line, node->left, DFLT);
 
-        fprintf(line->files.out, "push 0 \t\t\t#%llu\n", node->id);
+        fprintf(line->files.out, "push 0 \t\t\t#%llu\tЯ НАЧАЛО ИФА\n", node->id);
         fprintf(line->files.out, "je end_if%llu: \t#%llu\n", node->id, node->id);
 
         NodeProcess(line, node->right, DFLT);
@@ -133,19 +139,38 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     //DEF FUNC
     else if(type == T_OPR && op == O_DEF){
 
-        fprintf(line->files.out, "jmp def_func_end%d: \t#%llu\n", node->left->left->data.id, node->id);
-        fprintf(line->files.out, "def_func%d: \t\t#%llu\n",       node->left->left->data.id, node->id);
+        ProcessArgs(line, node);
+
+        fprintf(line->files.out, "jmp def_func_end%d: \t#%llu\tЯ ФУНКЦИЯ\n",   node->left->left->data.id, node->id);
+        fprintf(line->files.out, "def_func%d: \t\t#%llu\n",         node->left->left->data.id, node->id);
 
         NodeProcess(line, node->right, DFLT);
 
-        fprintf(line->files.out, "def_func_end%d: \t\t#%llu\n",   node->left->left->data.id, node->id);
+        fprintf(line->files.out, "def_func_end%d: \t\t#%llu\n",     node->left->left->data.id, node->id);
     }
 
     //CALL
     else if( type == T_OPR && op == O_CAL){
 
-        fprintf(line->files.out, "call def_func%d: \t\t#%llu\n",  node->left->left->data.id, node->id);
+        fprintf(line->files.out, "push bx \t\t#%llu\tЯ НАЧАЛО ВЫЗОВ ФУНКЦИЯ\n\n",             node->id);
 
+        NodeProcess(line, node->left->right->left, DFLT);
+
+        fprintf(line->files.out, "push bx \t\t#%llu\n",             node->id);
+        fprintf(line->files.out, "push %d \t\t\t#%llu\n",             line->id[node->left->left->data.id].stackFrameSize, node->id);
+        fprintf(line->files.out, "add \t\t\t#%llu\n",             node->id);
+
+        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",             node->id);
+
+        int i = 1; // num params
+
+        fprintf(line->files.out, "pop [bx + %d] \t#%llu\n",     i, node->id);
+
+        fprintf(line->files.out, "call def_func%d: #%llu\n",  node->left->left->data.id, node->id);
+
+        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",              node->id);
+
+        fprintf(line->files.out, "push ax \t\t#%llu\n",              node->id);
     }
 
     // OTHER
@@ -161,13 +186,36 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     // ID
     if (type == T_ID && param == EQL){
-        fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
-        line->id[node->data.id].memAddr = line->freeAddr;
-        line->freeAddr += 1;
+        //if (line->id[node->data.id].memAddr == 0) CreateAddr(line, node);
+
+        if (line->id[node->data.id].visibilityType == GLOBAL && line->id[node->data.id].memAddr == 0){
+            CreateAddr(line, node);
+
+            fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+
+            fprintf(line->files.out, "push bx \t\t#%llu\n", node->id);
+            fprintf(line->files.out, "push 1 \t\t#%llu\n", node->id);
+
+            fprintf(line->files.out, "add \t\t#%llu\n", node->id);
+
+            fprintf(line->files.out, "pop bx \t\t#%llu\n", node->id);
+        }
+
+        else if (line->id[node->data.id].visibilityType == GLOBAL && line->id[node->data.id].memAddr != 0){
+            fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        }
+
+        else if (line->id[node->data.id].visibilityType == LOCAL){
+            fprintf(line->files.out, "pop [bx + %d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        }
     }
 
     else if (type == T_ID && param != EQL){
-        fprintf(line->files.out, "push [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        if (line->id[node->data.id].visibilityType == GLOBAL){
+            fprintf(line->files.out, "push [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        }
+
+        else fprintf(line->files.out, "push [bx + %d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
     }
     //ID
 
@@ -214,7 +262,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
                 break;
 
             case O_IFB:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                fprintf(line->files.out, "\t\t\t\t#%llu\t Я КОНЕЦ ИФА\n", node->id);
                 break;
 
             case O_WHB:
@@ -222,10 +270,11 @@ static int NodeProcess(line_t* line, node_t* node, int param){
                 break;
 
             case O_DEF:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                fprintf(line->files.out, "\t\t\t\t#%llu\tЯ КОНЕЦ ФУНКЦИЯ\n", node->id);
                 break;
 
             case O_RET:
+                fprintf(line->files.out, "pop ax\t\t\t#%llu\n", node->id);
                 fprintf(line->files.out, "ret \t\t\t#%llu\n", node->id);
                 break;
 
@@ -264,15 +313,55 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     return OK;
 }
 
-static int SetVariableTypes(line_t* line, node_t* node, int param){
+static int CreateAddr(line_t* line, node_t* node){
 
-    if (node->type == T_ID){
-        if (param == DFLT) line->id[node->data.id].visibilityType = GLOBAL;
-        else               line->id[node->data.id].visibilityType = LOCAL;
+    line->id[node->data.id].memAddr = line->freeAddr;
+    line->freeAddr += 1;
+
+    return OK;
+}
+
+static int ProcessArgs(line_t* line, node_t* node){
+    node_t* nodeSpec = node->left;
+
+    int frameSize = 0;
+
+    node_t* nodeComma = nodeSpec;
+
+    while (nodeComma->right && nodeComma->right->type == T_OPR && nodeComma->right->data.op == O_CMA){
+        frameSize += 1;
+
+        nodeComma = nodeComma->right;
+        node_t* nodeArg = nodeComma->left;
+
+        line->id[nodeArg->data.id].visibilityType   = LOCAL;
+        line->id[nodeArg->data.id].memAddr          = frameSize;
     }
 
-    if (node->left)  SetVariableTypes(line, node->left,  param);
-    if (node->right) SetVariableTypes(line, node->right, param);
+    line->id[nodeSpec->left->data.id].stackFrameSize = frameSize;
+
+    return OK;
+}
+
+static int SetNameTypes(line_t* line, node_t* node){
+
+    if (node->type == T_ID && node->parent && (node->parent->data.op == O_DFS || node->parent->data.op == O_CSP)){
+        line->id[node->data.id].idType = FUNC;
+        line->id[node->data.id].visibilityType = FUNC;
+
+    }
+
+    else if (node->type == T_ID && node->parent && node->parent->data.op != O_CMA){
+        line->id[node->data.id].visibilityType = GLOBAL;
+        line->id[node->data.id].idType = VAR;
+    }
+
+    else if (node->type == T_ID){
+        line->id[node->data.id].idType = VAR;
+    }
+
+    if (node->left)  SetNameTypes(line, node->left);
+    if (node->right) SetNameTypes(line, node->right);
 
     return OK;
 }

@@ -39,4 +39,4 @@ format: ./bin/format.o ./bin/dump.o
 ./bin/format.o:  src/front-1.cpp hpp/front-1.hpp
 	$(CXX) -c ./src/front-1.cpp $(CXXFLAGS) -o ./bin/format.o
 clean:
-	rm -f main ./bin/*.o ./bin/png/*.png
+	rm -f main back format ./bin/*.o ./bin/png/*.png

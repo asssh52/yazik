@@ -75,7 +75,7 @@ const opName_t opList[] = {
     {"skibidi",     O_IFB, 7,   "if",           2   },
     {"ohio",        O_IFC, 4,   "NAN",         -1   },
     {"sigma",       O_PNT, 5,   "print",        5   },
-    {"@",           O_TRM, 1,   "terml",        5   },
+    {"@",           O_TRM, 1,   "terminal",     8   },
     {"$",           O_SEP, 1,   ";",            1   },
     {"amogus",      O_WHB, 6,   "while",        5   },
     {"imposter",    O_WHC, 8,   "NAN",         -1   },
@@ -84,7 +84,7 @@ const opName_t opList[] = {
     {"whopper",     O_CMA, 7,   ",",            1   },
     {"wakie",       O_CAL, 5,   "call",         4   },
     {"wakye",       O_CSP, 5,   "spec",         4   },
-    {"banana",      O_RET, 6,   "ret",          3   }
+    {"banana",      O_RET, 6,   "return",       6   }
 
 };
 
