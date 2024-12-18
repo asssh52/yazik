@@ -103,7 +103,6 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
         NodeProcess(line, node->right, DFLT);
         NodeProcess(line, node->left, EQL);
-
     }
 
     // IF
@@ -156,21 +155,21 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
         NodeProcess(line, node->left->right->left, DFLT);
 
-        fprintf(line->files.out, "push bx \t\t#%llu\n",             node->id);
-        fprintf(line->files.out, "push %d \t\t\t#%llu\n",             line->id[node->left->left->data.id].stackFrameSize, node->id);
-        fprintf(line->files.out, "add \t\t\t#%llu\n",             node->id);
+        fprintf(line->files.out, "push bx \t\t\t" "#%llu\n",      node->id);
+        fprintf(line->files.out, "push %d \t\t\t" "#%llu\n",      line->id[node->left->left->data.id].stackFrameSize, node->id);
+        fprintf(line->files.out, "add     \t\t\t" "#%llu\n",      node->id);
 
-        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",             node->id);
+        fprintf(line->files.out, "pop bx \t\t\t"  "#%llu\n",      node->id);
 
         int i = 1; // num params
 
-        fprintf(line->files.out, "pop [bx + %d] \t#%llu\n",     i, node->id);
+        fprintf(line->files.out, "pop [bx + %d] \t#%llu\n",       i, node->id);
 
-        fprintf(line->files.out, "call def_func%d: #%llu\n",  node->left->left->data.id, node->id);
+        fprintf(line->files.out, "call def_func%d: #%llu\n",      node->left->left->data.id, node->id);
 
-        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",              node->id);
+        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",          node->id);
 
-        fprintf(line->files.out, "push ax \t\t#%llu\n",              node->id);
+        fprintf(line->files.out, "push ax \t\t#%llu\n",           node->id);
     }
 
     // OTHER

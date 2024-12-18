@@ -6,7 +6,7 @@ const int64_t MAXDOT_BUFF     = 8;
 const int64_t MAXLEN_COMMAND  = 64;
 const int64_t MAX_HTML_PRNT   = 1024;
 
-const int64_t MAX_READER_BUFF = 2048;
+const int64_t MAX_READER_BUFF = 20000;
 
 
 static int NodeDump         (line_t* line, node_t* node, int depth, int param);
@@ -91,10 +91,11 @@ int DumpIds(line_t* line, FILE* file){
     fprintf(file, "Nametable dump:\n\n");
 
     for (int i = 0; i < line->numId; i++){
-        fprintf(file, "%d. name:", i);
-        for (int j = 0; j < line->id[i].len; j++){
-            fprintf(file, "%c", line->id[i].name[j]);
-        }
+        fprintf(file, "%02d. name:", i);
+        // for (int j = 0; j < line->id[i].len; j++){
+        //     fprintf(file, "%c", line->id[i].name[j]);
+        // }
+        fprintf(file, "%-10.10s", line->id[i].name);
 
         fprintf(file, "\t len:%llu",        line->id[i].len);
         fprintf(file, "\t idType:%c",       line->id[i].idType);

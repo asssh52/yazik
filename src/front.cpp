@@ -45,6 +45,7 @@ static node_t*  GetWhile        (line_t* line);
 static node_t*  GetDef          (line_t* line);
 static node_t*  GetCall         (line_t* line);
 static node_t*  GetRet          (line_t* line);
+static node_t*  GetCompoundOp   (line_t* line);
 static int      SyntaxError     (line_t* line, int param);
 
 static int      NodeSave        (line_t* line, node_t* node, int depth, FILE* file);
@@ -357,38 +358,12 @@ static int SyntaxError(line_t* line, int param){
 static node_t* GetG(line_t* line){
     if (line->err == true) return 0;
 
-    node_t* node_left = GetOp(line);
-    if (!node_left) return 0;
-
-    if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-    node_t* nodeSep = line->tokens + line->tptr;
-    line->tptr += 1;
-    line->tree->numElem += 1;
-
-    nodeSep->left     = node_left;
-    node_left->parent = nodeSep;
-
-    node_t* nodeSepReturn = nodeSep;
-
-    while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_TRM) || line->tokens[line->tptr].type == 0){
-        node_t* node_left = GetOp(line);
-        if (!node_left) return 0;
-
-        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-        nodeSep->right  = line->tokens + line->tptr;
-        line->tokens[line->tptr].parent = nodeSep;
-
-        nodeSep = line->tokens + line->tptr;
-        line->tptr += 1;
-        line->tree->numElem += 1;
-
-        nodeSep->left     = node_left;
-        node_left->parent = nodeSep;
-    }
+    node_t* retNode = GetCompoundOp(line);
+    if (!retNode) return 0;
 
     if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_TRM) SyntaxError(line, S_TRMNL);
 
-    return nodeSepReturn;
+    return retNode;
 }
 
 
@@ -468,34 +443,8 @@ static node_t* GetIf(line_t* line){
         line->tptr += 1;
         line->tree->numElem += 1;
 
-        node_t* node_left = GetOp(line);
-        if (!node_left) return 0;
-
-        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-        node_t* nodeSep = line->tokens + line->tptr;
-        line->tptr += 1;
-        line->tree->numElem += 1;
-
-        nodeSep->left     = node_left;
-        node_left->parent = nodeSep;
-
-        node_t* nodeSepReturn = nodeSep;
-
-        while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFC)){
-            node_left = GetOp(line);
-            if (!node_left) return 0;
-
-            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-            nodeSep->right  = line->tokens + line->tptr;
-            line->tokens[line->tptr].parent = nodeSep;
-
-            nodeSep = line->tokens + line->tptr;
-            line->tptr += 1;
-            line->tree->numElem += 1;
-
-            nodeSep->left     = node_left;
-            node_left->parent = nodeSep;
-        }
+        node_t* nodeCompOp = GetCompoundOp(line);
+        if (!nodeCompOp) return 0;
 
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_IFC){
             line->tptr += 1;
@@ -506,8 +455,8 @@ static node_t* GetIf(line_t* line){
             retNode->left         = nodeCondition;
             nodeCondition->parent = retNode;
 
-            retNode->right = nodeSepReturn;
-            nodeSepReturn->parent = retNode;
+            retNode->right = nodeCompOp;
+            nodeCompOp->parent = retNode;
         }
 
         else SyntaxError(line, S_IFC);
@@ -545,34 +494,8 @@ static node_t* GetWhile(line_t* line){
         line->tptr += 1;
         line->tree->numElem += 1;
 
-        node_t* node_left = GetOp(line);
-        if (!node_left) return 0;
-
-        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-        node_t* nodeSep = line->tokens + line->tptr;
-        line->tptr += 1;
-        line->tree->numElem += 1;
-
-        nodeSep->left     = node_left;
-        node_left->parent = nodeSep;
-
-        node_t* nodeSepReturn = nodeSep;
-
-        while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_WHC)){
-            node_left = GetOp(line);
-            if (!node_left) return 0;
-
-            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-            nodeSep->right  = line->tokens + line->tptr;
-            line->tokens[line->tptr].parent = nodeSep;
-
-            nodeSep = line->tokens + line->tptr;
-            line->tptr += 1;
-            line->tree->numElem += 1;
-
-            nodeSep->left     = node_left;
-            node_left->parent = nodeSep;
-        }
+        node_t* nodeCompOp = GetCompoundOp(line);
+        if (!nodeCompOp) return 0;
 
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_WHC){
             line->tptr += 1;
@@ -583,8 +506,8 @@ static node_t* GetWhile(line_t* line){
             retNode->left         = nodeCondition;
             nodeCondition->parent = retNode;
 
-            retNode->right = nodeSepReturn;
-            nodeSepReturn->parent = retNode;
+            retNode->right = nodeCompOp;
+            nodeCompOp->parent = retNode;
         }
 
         else SyntaxError(line, S_WHC);
@@ -605,34 +528,8 @@ static node_t* GetDef(line_t* line){
         line->tptr += 1;
         line->tree->numElem += 1;
 
-        node_t* node_left = GetOp(line);
-        if (!node_left) return 0;
-
-        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-        node_t* nodeSep = line->tokens + line->tptr;
-        line->tptr += 1;
-        line->tree->numElem += 1;
-
-        nodeSep->left     = node_left;
-        node_left->parent = nodeSep;
-
-        node_t* nodeSepReturn = nodeSep;
-
-        while (!(line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_DFS)){
-            node_left = GetOp(line);
-            if (!node_left) return 0;
-
-            if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
-            nodeSep->right  = line->tokens + line->tptr;
-            line->tokens[line->tptr].parent = nodeSep;
-
-            nodeSep = line->tokens + line->tptr;
-            line->tptr += 1;
-            line->tree->numElem += 1;
-
-            nodeSep->left     = node_left;
-            node_left->parent = nodeSep;
-        }
+        node_t* nodeCompOp = GetCompoundOp(line);
+        if (!nodeCompOp) return 0;
 
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_DFS){
                 node_t* nodeSpec = line->tokens + line->tptr;
@@ -647,8 +544,8 @@ static node_t* GetDef(line_t* line){
                 retNode->left         = nodeSpec;   //FUNC SPEC(NAME + PARAMS)
                 nodeSpec->parent = retNode;
 
-                retNode->right = nodeSepReturn;     //FUNC OPS
-                nodeSepReturn->parent = retNode;
+                retNode->right = nodeCompOp;     //FUNC OPS
+                nodeCompOp->parent = retNode;
 
                 node_t* nodePrevComma = nodeSpec;
                 //params
@@ -823,4 +720,46 @@ static node_t* GetNum(line_t* line){
     }
 
     return node;
+}
+
+static node_t* GetCompoundOp(line_t* line){
+    node_t* retNode = nullptr;
+
+    node_t* node_left = GetOp(line);
+    if (!node_left) return 0;
+
+    if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+    node_t* nodeSep = line->tokens + line->tptr;
+    line->tptr += 1;
+    line->tree->numElem += 1;
+
+    nodeSep->left     = node_left;
+    node_left->parent = nodeSep;
+
+    node_t* nodeSepReturn = nodeSep;
+
+    retNode = nodeSepReturn;
+
+    node_t* node = line->tokens + line->tptr;
+
+    while (!(node->type == T_OPR && (node->data.op == O_TRM || node->data.op == O_IFC || node->data.op == O_WHC || node->data.op == O_DFS))){
+
+        node_t* node_left = GetOp(line);
+        if (!node_left) return 0;
+
+        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_SEP) SyntaxError(line, S_SEP);
+        nodeSep->right  = line->tokens + line->tptr;
+        line->tokens[line->tptr].parent = nodeSep;
+
+        nodeSep = line->tokens + line->tptr;
+        line->tptr += 1;
+        line->tree->numElem += 1;
+
+        nodeSep->left     = node_left;
+        node_left->parent = nodeSep;
+
+        node = line->tokens + line->tptr;
+    }
+
+    return retNode;
 }
