@@ -1,0 +1,46 @@
+disco = 0$
+
+kfc
+    skibidi
+            skibidi sigma 1$
+                    banana 12345$
+                ohio cookie equal 0$
+
+            sigma (0 - 12345)$
+            banana (0 - 12345)$
+
+        ohio biscuit equal 0$
+
+    sigma 1$
+    sigma (0 - cookie / biscuit)$
+    banana 1$
+
+
+xd simple whopper biscuit whopper cookie$
+
+kfc
+    skibidi banana (wakie wakye simple whopper biscuit whopper cookie)$
+        ohio arbuz equal 0$
+
+    disco = biscuit pow 2 - (4 * arbuz * cookie)$
+
+    skibidi sigma (0 - 12345)$
+            banana (0 - 12345)$
+        ohio disco less 0$
+
+    skibidi sigma 1$
+            sigma (0 - biscuit / 2 / arbuz)$
+            banana 1$
+        ohio disco equal 0$
+
+    sigma 2$
+    sigma 0 - biscuit - sqrt(disco) / 2 / arbuz$
+    sigma 0 - biscuit + sqrt(disco) / 2 / arbuz$
+
+    banana 2$
+
+
+xd solve whopper arbuz whopper biscuit whopper cookie$
+
+sigma wakie wakye solve whopper 1 whopper 4 whopper 3$
+@

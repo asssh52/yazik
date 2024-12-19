@@ -311,7 +311,7 @@ static int SyntaxError(line_t* line, int param){
             break;
 
         case S_BRCKT:
-            printf(PNK "expected ')' at " CYN "<%llu>\n" RESET, line->tptr);
+            printf(PNK "expected '(' or ')' at " CYN "<%llu>\n" RESET, line->tptr);
             break;
 
         case S_ID:
@@ -586,7 +586,7 @@ static node_t* GetE(line_t* line){
         (op == O_ADD || op == O_SUB || op == O_MUL ||   // +  -  *
          op == O_DIV || op == O_LES || op == O_LSE ||   // /  <  <=
          op == O_MOR || op == O_MRE || op == O_EQQ ||   // >  >= ==
-         op == O_NEQ || op == O_POW)){                  // != ^
+         op == O_NEQ || op == O_POW)){   // != ^
 
         node_t* opNode  = line->tokens + line->tptr;
         line->tptr++;
@@ -617,7 +617,6 @@ static node_t* GetP(line_t* line){
         node_t* node = GetE(line);
         if (!node) return 0;
 
-        //printf("tptr:%d, data:%d\n", line->tptr, line->tokens[line->tptr].data.op);
         if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
 
         line->tptr++;
@@ -637,6 +636,26 @@ static node_t* GetP(line_t* line){
         if (!nodeId) return 0;
 
         return nodeId;
+    }
+
+    else if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op == O_SQT){
+        node_t* nodeSqrt = line->tokens + line->tptr;
+        line->tptr++;
+
+        if (line->tokens[line->tptr].type != T_OPR || line->tokens[line->tptr].data.op != O_OBR) SyntaxError(line, S_BRCKT);
+        line->tptr++;
+
+        node_t* node = GetE(line);
+        if (!node) return 0;
+
+        nodeSqrt->left = node;
+        node->parent = nodeSqrt;
+
+        if (line->tokens[line->tptr].type == T_OPR && line->tokens[line->tptr].data.op != O_CBR) SyntaxError(line, S_BRCKT);
+
+        line->tptr++;
+
+        return nodeSqrt;
     }
 
     else {

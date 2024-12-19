@@ -35,6 +35,7 @@ enum nodeOperations{
     O_EQQ = 113,    // q
     O_NEQ = 114,    // r
     O_POW = 94,     // ^
+    O_SQT = 83,     // S
 
     O_SIN = 115,    // s
     O_COS = 99,     // c
@@ -71,6 +72,7 @@ const opName_t opList[] = {
     {"equal",       O_EQQ, 5,   "==",           2   },
     {"not_equal",   O_NEQ, 9,   "!=",           2   },
     {"pow",         O_POW, 3,   "^",            1   },
+    {"sqrt",        O_SQT, 4,   "sqrt",         4   },
     {"sin",         O_SIN, 3,   "NAN",         -1   },
     {"cos",         O_COS, 3,   "NAN",         -1   },
     {"tan",         O_TAN, 3,   "NAN",         -1   },

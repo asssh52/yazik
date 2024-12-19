@@ -49,6 +49,12 @@ static int SetNameTypes     (line_t* line, node_t* node);
 static int CreateAddr       (line_t* line, node_t* node);
 static int ProcessArgs      (line_t* line, node_t* node);
 
+static int ProcessIf        (line_t* line, node_t* node);
+static int ProcessDef       (line_t* line, node_t* node);
+static int ProcessWhile     (line_t* line, node_t* node);
+static int ProcessCall      (line_t* line, node_t* node);
+static int ProcessOp        (line_t* line, node_t* node);
+
 static int PlaceNumOp       (line_t* line, int numSpaces, int numLine, int param, node_t* node);
 
 int main(){
@@ -105,82 +111,28 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     // =
     if (type == T_OPR && op == O_EQL){
-
         NodeProcess(line, node->right, DFLT);
         NodeProcess(line, node->left, EQL);
     }
 
     // IF
     else if(type == T_OPR && op == O_IFB){
-
-        NodeProcess(line, node->left, DFLT);
-
-        PRNT    ("push 0", "НАЧАЛО ИФА");
-        PRNT_JMP("je end_if", "");
-
-        NodeProcess(line, node->right, DFLT);
-
-        PRNT_JMP("end_if", "");
-
+        ProcessIf(line, node);
     }
 
     // WHILE
     else if(type == T_OPR && op == O_WHB){
-
-        PRNT_JMP("while", "НАЧАЛО ЦИКЛА");
-
-        NodeProcess(line, node->left, DFLT);
-
-        PRNT    ("push 0", "");
-        PRNT_JMP("je end_while", "");
-
-        NodeProcess(line, node->right, DFLT);
-
-        PRNT_JMP("jmp while", "");
-        PRNT_JMP("end_while", "");
-
+        ProcessWhile(line, node);
     }
 
     //DEF FUNC
     else if(type == T_OPR && op == O_DEF){
-
-        ProcessArgs(line, node);
-
-
-        PRNT_CUSTOM("jmp def_func_end%d:",   node->left->left->data.id);
-
-        PRNT_CUSTOM("def_func%d:", node->left->left->data.id);
-
-        NodeProcess(line, node->right, DFLT);
-
-        PRNT_CUSTOM("def_func_end%d:", node->left->left->data.id);
-
+        ProcessDef(line, node);
     }
 
     //CALL
     else if( type == T_OPR && op == O_CAL){
-
-
-        PRNT        ("push bx", "Я НАЧАЛО ВЫЗОВ ФУНКЦИЯ");
-
-        NodeProcess(line, node->left->right, DFLT);
-
-        PRNT        ("push bx", "");
-        PRNT_CUSTOM ("push %d", line->id[node->left->left->data.id].stackFrameSize);
-        PRNT        ("add", "");
-        PRNT        ("pop bx", "");
-
-        int params = line->id[node->left->left->data.id].numParams; // num params
-
-        for (int i = params; i > 0; i--){
-            PRNT_CUSTOM("pop [bx+%d]", i);
-        }
-
-        PRNT_CUSTOM ("call def_func%d:", node->left->left->data.id);
-        PRNT        ("pop bx", "");
-
-        PRNT        ("push ax", "");
-
+        ProcessCall(line, node);
     }
 
     // OTHER
@@ -247,113 +199,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     //OP
     if (type == T_OPR){
-        switch (node->data.op){
-
-            // +
-            case O_ADD:
-                PRNT("add", "");
-                break;
-
-            // -
-            case O_SUB:
-                PRNT("sub", "");
-                break;
-
-            // *
-            case O_MUL:
-                PRNT("mul", "");
-                break;
-
-            // /
-            case O_DIV:
-                PRNT("div", "");
-                break;
-
-            // print
-            case O_PNT:
-                PRNT("out", "");
-                break;
-
-            // ;
-            case O_SEP:
-                PRNT("", "");
-                break;
-
-            // =
-            case O_EQL:
-                PRNT("", "");
-                break;
-
-            // if
-            case O_IFB:
-                PRNT("", "КОНЕЦ ИФА");
-                break;
-
-            // while
-            case O_WHB:
-                PRNT("", "КОНЕЦ ЦИКЛА");
-                break;
-
-            // function defenition
-            case O_DEF:
-                PRNT("", "КОНЕЦ ОПРЕДЕЛЕНИЯ ФУНКЦИИ");
-                break;
-
-            // return
-            case O_RET:
-                PRNT("pop ax", "");
-                PRNT("ret", "");
-                break;
-
-            // call
-            case O_CAL:
-                PRNT("", "");
-                break;
-
-            // <
-            case O_LES:
-                PRNT("less", "");
-                break;
-
-            // <=
-            case O_LSE:
-                PRNT("less_equal", "");
-                break;
-
-            // >
-            case O_MOR:
-                PRNT("more", "");
-                break;
-
-            // >=
-            case O_MRE:
-                PRNT("more_equal", "");
-                break;
-
-            // ==
-            case O_EQQ:
-                PRNT("equal", "");
-                break;
-
-            // !=
-            case O_NEQ:
-                PRNT("not_equal", "");
-                break;
-
-            // ^
-            case O_POW:
-                PRNT("power", "");
-                break;
-
-            // ,
-            case O_CMA:
-                PRNT("", "");
-                break;
-
-            default:
-                PRNT("uknown node", "");
-                break;
-        }
+        ProcessOp(line, node);
     }
     //OP
 
@@ -426,6 +272,191 @@ static int PlaceNumOp(line_t* line, int numSpaces, int numLine, int param, node_
     fprintf(line->files.out, "node;%0.3llu\t", node->id);
 
     if (param) fprintf(line->files.out, "\n");
+
+    return OK;
+}
+
+static int ProcessIf(line_t* line, node_t* node){
+
+    NodeProcess(line, node->left, DFLT);
+
+    PRNT    ("push 0", "НАЧАЛО ИФА");
+    PRNT_JMP("je end_if", "");
+
+    NodeProcess(line, node->right, DFLT);
+
+    PRNT_JMP("end_if", "");
+
+    return OK;
+}
+
+static int ProcessWhile(line_t* line, node_t* node){
+    PRNT_JMP("while", "НАЧАЛО ЦИКЛА");
+
+    NodeProcess(line, node->left, DFLT);
+
+    PRNT    ("push 0", "");
+    PRNT_JMP("je end_while", "");
+
+    NodeProcess(line, node->right, DFLT);
+
+    PRNT_JMP("jmp while", "");
+    PRNT_JMP("end_while", "");
+
+    return OK;
+}
+
+static int ProcessDef(line_t* line, node_t* node){
+    ProcessArgs(line, node);
+
+    PRNT("", "НАЧАЛО ОПРЕДЕЛЕНИЯ ФУНКЦИИ");
+    PRNT_CUSTOM("jmp def_func_end%d:",   node->left->left->data.id);
+    PRNT_CUSTOM("def_func%d:", node->left->left->data.id);
+
+    NodeProcess(line, node->right, DFLT);
+
+    PRNT_CUSTOM("def_func_end%d:", node->left->left->data.id);
+
+    return OK;
+}
+
+static int ProcessCall(line_t* line, node_t* node){
+    PRNT        ("push bx", "Я НАЧАЛО ВЫЗОВ ФУНКЦИЯ");
+
+    NodeProcess(line, node->left->right, DFLT);
+
+    PRNT        ("push bx", "");
+    PRNT_CUSTOM ("push %d", line->id[node->left->left->data.id].stackFrameSize);
+    PRNT        ("add", "");
+    PRNT        ("pop bx", "");
+
+    int params = line->id[node->left->left->data.id].numParams; // num params
+
+    for (int i = params; i > 0; i--){
+        PRNT_CUSTOM("pop [bx+%d]", i);
+    }
+
+    PRNT_CUSTOM ("call def_func%d:", node->left->left->data.id);
+    PRNT        ("pop bx", "");
+
+    PRNT        ("push ax", "");
+
+    return OK;
+}
+
+static int ProcessOp(line_t* line, node_t* node){
+
+    switch (node->data.op){
+        // +
+        case O_ADD:
+            PRNT("add", "");
+            break;
+
+        // -
+        case O_SUB:
+            PRNT("sub", "");
+            break;
+
+        // *
+        case O_MUL:
+            PRNT("mul", "");
+            break;
+
+        // /
+        case O_DIV:
+            PRNT("div", "");
+            break;
+
+        // print
+        case O_PNT:
+            PRNT("out", "");
+            break;
+
+        // ;
+        case O_SEP:
+            PRNT("", "");
+            break;
+
+        // =
+        case O_EQL:
+            PRNT("", "");
+            break;
+
+        // if
+        case O_IFB:
+            PRNT("", "КОНЕЦ ИФА");
+            break;
+
+        // while
+        case O_WHB:
+            PRNT("", "КОНЕЦ ЦИКЛА");
+            break;
+
+        // function defenition
+        case O_DEF:
+            PRNT("", "КОНЕЦ ОПРЕДЕЛЕНИЯ ФУНКЦИИ");
+            break;
+
+        // return
+        case O_RET:
+            PRNT("pop ax", "");
+            PRNT("ret", "");
+            break;
+
+        // call
+        case O_CAL:
+            PRNT("", "");
+            break;
+
+        // <
+        case O_LES:
+            PRNT("less", "");
+            break;
+
+        // <=
+        case O_LSE:
+            PRNT("less_equal", "");
+            break;
+
+        // >
+        case O_MOR:
+            PRNT("more", "");
+            break;
+
+        // >=
+        case O_MRE:
+            PRNT("more_equal", "");
+            break;
+
+        // ==
+        case O_EQQ:
+            PRNT("equal", "");
+            break;
+
+        // !=
+        case O_NEQ:
+            PRNT("not_equal", "");
+            break;
+
+        // ^
+        case O_POW:
+            PRNT("power", "");
+            break;
+
+        // ,
+        case O_CMA:
+            PRNT("", "");
+            break;
+
+        // sqrt
+        case O_SQT:
+            PRNT("sqrt", "");
+            break;
+
+        default:
+            PRNT("uknown node", "");
+            break;
+    }
 
     return OK;
 }

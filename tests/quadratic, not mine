@@ -1,0 +1,90 @@
+left_wing = 0$
+
+right_wing = 0$
+
+parrot_discrimination = 0$
+
+kfc
+    skibidi
+        skibidi banana 21343$
+            ohio (grass equal 0)$
+
+
+        skibidi banana 0$
+            ohio (grass not_equal 0)$
+
+    ohio (field equal 0)$
+
+    left_wing = ((0 - grass)/ field)$
+
+    right_wing = left_wing$
+
+    banana 1$
+
+xd fly_line whopper stomach whopper field whopper grass $
+
+
+
+kfc
+    parrot_discrimination = ((beak * beak) - ((4 * seed_area) * feather))$
+
+sigma parrot_discrimination$
+
+
+skibidi
+    sigma 0$
+    sigma 0$
+    sigma 0$
+    sigma 0$
+    banana 0$
+
+ohio (parrot_discrimination less 0)$
+
+
+skibidi
+    left_wing = (((0 - beak) / 2) / seed_area)$
+    right_wing = left_wing$
+
+    banana 1$
+
+ohio (parrot_discrimination equal 0)$
+
+
+skibidi
+
+    left_wing = ((((0 - beak) + (parrot_discrimination pow (1 / 2)))/ 2)/ seed_area)$
+    right_wing = ((((0 - beak) - (parrot_discrimination pow (1 / 2)))/ 2)/ seed_area)$
+
+    banana 2$
+
+ohio (parrot_discrimination more 0)$
+
+banana 4567$
+
+xd fly_square whopper seed_area whopper beak whopper feather $
+
+
+
+kfc
+    skibidi
+        banana (wakie wakye fly_line whopper bowl whopper secret whopper ZOB)$
+	ohio (bowl equal 0)$
+
+
+    skibidi
+        banana (wakie wakye fly_square whopper bowl whopper secret whopper ZOB )$
+	ohio (bowl not_equal 0)$
+
+    banana 1234$
+
+xd prepare_for_flight whopper bowl whopper secret whopper ZOB $
+
+
+
+sigma (wakie wakye prepare_for_flight whopper 1  whopper 40 whopper 300)$
+
+sigma left_wing$
+
+sigma right_wing$
+
+@
