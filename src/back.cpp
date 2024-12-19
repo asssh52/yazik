@@ -2,6 +2,14 @@
 
 #define MEOW fprintf(stderr, PNK  "MEOW\n" RESET);
 
+#define PRNT_JMP(name, ...) PlaceNumOp(line, fprintf(line->files.out, name "%llu:", node->id), __LINE__, 0, node); \
+                            fprintf(line->files.out, " " __VA_ARGS__ "\n");\
+
+#define PRNT(name, ...)     PlaceNumOp(line, fprintf(line->files.out, name),                  __LINE__, 0, node); \
+                            fprintf(line->files.out, " " __VA_ARGS__ "\n");\
+
+#define PRNT_CUSTOM(...)    PlaceNumOp(line, fprintf(line->files.out, __VA_ARGS__), __LINE__, 1, node)\
+
 const char*   DFLT_HTML_FILE = "htmldump.html";
 const char*   DFLT_SAVE_FILE = "save.txt";
 const char*   DFLT_OUT_FILE  = "out.txt";
@@ -37,9 +45,11 @@ enum id_types{
 static int BackCtor         (line_t* line);
 static int BackProccess     (line_t* line);
 static int NodeProcess      (line_t* line, node_t* node, int param);
-static int SetNameTypes (line_t* line, node_t* node);
+static int SetNameTypes     (line_t* line, node_t* node);
 static int CreateAddr       (line_t* line, node_t* node);
 static int ProcessArgs      (line_t* line, node_t* node);
+
+static int PlaceNumOp       (line_t* line, int numSpaces, int numLine, int param, node_t* node);
 
 int main(){
     line_t* line = (line_t*)calloc(1, sizeof(*line));
@@ -74,7 +84,7 @@ static int BackCtor(line_t* line){
 
     line->files.dotName = DFLT_DOT_FILE;
 
-    line->freeAddr = 10;
+    line->freeAddr = 1;
 
     return OK;
 }
@@ -93,11 +103,6 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     int type = node->type;
     int op = node->data.op;
 
-    if (node->type == T_OPR){
-        fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
-    }
-
-
     // =
     if (type == T_OPR && op == O_EQL){
 
@@ -110,28 +115,29 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
         NodeProcess(line, node->left, DFLT);
 
-        fprintf(line->files.out, "push 0 \t\t\t#%llu\tЯ НАЧАЛО ИФА\n", node->id);
-        fprintf(line->files.out, "je end_if%llu: \t#%llu\n", node->id, node->id);
+        PRNT    ("push 0", "НАЧАЛО ИФА");
+        PRNT_JMP("je end_if", "");
 
         NodeProcess(line, node->right, DFLT);
 
-        fprintf(line->files.out, "end_if%llu: \t\t#%llu\n", node->id, node->id);
+        PRNT_JMP("end_if", "");
+
     }
 
     // WHILE
     else if(type == T_OPR && op == O_WHB){
 
-        fprintf(line->files.out, "while%llu: \t\t#%llu\n", node->id, node->id);
+        PRNT_JMP("while", "НАЧАЛО ЦИКЛА");
 
         NodeProcess(line, node->left, DFLT);
 
-        fprintf(line->files.out, "push 0 \t\t\t#%llu\n", node->id);
-        fprintf(line->files.out, "je end_while%llu: \t#%llu\n", node->id, node->id);
+        PRNT    ("push 0", "");
+        PRNT_JMP("je end_while", "");
 
         NodeProcess(line, node->right, DFLT);
 
-        fprintf(line->files.out, "jmp while%llu: \t\t#%llu\n", node->id, node->id);
-        fprintf(line->files.out, "end_while%llu: \t\t#%llu\n", node->id, node->id);
+        PRNT_JMP("jmp while", "");
+        PRNT_JMP("end_while", "");
 
     }
 
@@ -140,40 +146,49 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
         ProcessArgs(line, node);
 
-        fprintf(line->files.out, "jmp def_func_end%d: \t#%llu\tЯ ФУНКЦИЯ\n",   node->left->left->data.id, node->id);
-        fprintf(line->files.out, "def_func%d: \t\t#%llu\n",         node->left->left->data.id, node->id);
+
+        PRNT_CUSTOM("jmp def_func_end%d:",   node->left->left->data.id);
+
+        PRNT_CUSTOM("def_func%d:", node->left->left->data.id);
 
         NodeProcess(line, node->right, DFLT);
 
-        fprintf(line->files.out, "def_func_end%d: \t\t#%llu\n",     node->left->left->data.id, node->id);
+        PRNT_CUSTOM("def_func_end%d:", node->left->left->data.id);
+
     }
 
     //CALL
     else if( type == T_OPR && op == O_CAL){
 
-        fprintf(line->files.out, "push bx \t\t#%llu\tЯ НАЧАЛО ВЫЗОВ ФУНКЦИЯ\n\n",             node->id);
 
-        NodeProcess(line, node->left->right->left, DFLT);
+        PRNT        ("push bx", "Я НАЧАЛО ВЫЗОВ ФУНКЦИЯ");
 
-        fprintf(line->files.out, "push bx \t\t\t" "#%llu\n",      node->id);
-        fprintf(line->files.out, "push %d \t\t\t" "#%llu\n",      line->id[node->left->left->data.id].stackFrameSize, node->id);
-        fprintf(line->files.out, "add     \t\t\t" "#%llu\n",      node->id);
+        NodeProcess(line, node->left->right, DFLT);
 
-        fprintf(line->files.out, "pop bx \t\t\t"  "#%llu\n",      node->id);
+        PRNT        ("push bx", "");
+        PRNT_CUSTOM ("push %d", line->id[node->left->left->data.id].stackFrameSize);
+        PRNT        ("add", "");
+        PRNT        ("pop bx", "");
 
-        int i = 1; // num params
+        int params = line->id[node->left->left->data.id].numParams; // num params
 
-        fprintf(line->files.out, "pop [bx + %d] \t#%llu\n",       i, node->id);
+        for (int i = params; i > 0; i--){
+            PRNT_CUSTOM("pop [bx+%d]", i);
+        }
 
-        fprintf(line->files.out, "call def_func%d: #%llu\n",      node->left->left->data.id, node->id);
+        PRNT_CUSTOM ("call def_func%d:", node->left->left->data.id);
+        PRNT        ("pop bx", "");
 
-        fprintf(line->files.out, "pop bx \t\t\t#%llu\n",          node->id);
+        PRNT        ("push ax", "");
 
-        fprintf(line->files.out, "push ax \t\t#%llu\n",           node->id);
     }
 
     // OTHER
-    else if (type == T_OPR && (op == O_ADD || op == O_SUB || op == O_DIV || op == O_MUL || op == O_LES || op == O_LSE || op == O_MOR || op == O_MRE || op == O_EQQ)){
+    else if (type == T_OPR && (op == O_ADD || op == O_SUB || op == O_DIV ||   // +  -  /
+                               op == O_MUL || op == O_LES || op == O_LSE ||   // *  <  <=
+                               op == O_MOR || op == O_MRE || op == O_EQQ ||   // >  >= ==
+                               op == O_NEQ || op == O_POW)){                  // != ^
+
         if (node->right)  NodeProcess(line, node->right, DFLT);
         if (node->left)   NodeProcess(line, node->left, DFLT);
     }
@@ -185,36 +200,38 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     // ID
     if (type == T_ID && param == EQL){
-        //if (line->id[node->data.id].memAddr == 0) CreateAddr(line, node);
-
         if (line->id[node->data.id].visibilityType == GLOBAL && line->id[node->data.id].memAddr == 0){
             CreateAddr(line, node);
 
-            fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
 
-            fprintf(line->files.out, "push bx \t\t#%llu\n", node->id);
-            fprintf(line->files.out, "push 1 \t\t#%llu\n", node->id);
+            PRNT_CUSTOM("pop [%d]", line->id[node->data.id].memAddr);
 
-            fprintf(line->files.out, "add \t\t#%llu\n", node->id);
+            PRNT("push bx", "");
+            PRNT("push 1", "");
 
-            fprintf(line->files.out, "pop bx \t\t#%llu\n", node->id);
+            PRNT("add", "");
+
+            PRNT("pop bx", "");
+
         }
 
         else if (line->id[node->data.id].visibilityType == GLOBAL && line->id[node->data.id].memAddr != 0){
-            fprintf(line->files.out, "pop [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+            PRNT_CUSTOM("pop [%d]", line->id[node->data.id].memAddr);
         }
 
         else if (line->id[node->data.id].visibilityType == LOCAL){
-            fprintf(line->files.out, "pop [bx + %d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+            PRNT_CUSTOM("pop [%d]", line->id[node->data.id].memAddr);
         }
     }
 
     else if (type == T_ID && param != EQL){
         if (line->id[node->data.id].visibilityType == GLOBAL){
-            fprintf(line->files.out, "push [%d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+            PRNT_CUSTOM("push [%d]", line->id[node->data.id].memAddr);
         }
 
-        else fprintf(line->files.out, "push [bx + %d] \t\t#%llu\n", line->id[node->data.id].memAddr, node->id);
+        else{
+            PRNT_CUSTOM("push [bx+%d]", line->id[node->data.id].memAddr);
+        }
     }
     //ID
 
@@ -222,7 +239,7 @@ static int NodeProcess(line_t* line, node_t* node, int param){
 
     // NUM
     if (type == T_NUM){
-        fprintf(line->files.out, "push %lld \t\t\t#%llu\n", (int64_t)node->data.num, node->id);
+        PRNT_CUSTOM("push %lld", (int64_t)node->data.num);
     }
     // NUM
 
@@ -232,77 +249,109 @@ static int NodeProcess(line_t* line, node_t* node, int param){
     if (type == T_OPR){
         switch (node->data.op){
 
+            // +
             case O_ADD:
-                fprintf(line->files.out, "add \t\t\t#%llu\n", node->id);
+                PRNT("add", "");
                 break;
 
+            // -
             case O_SUB:
-                fprintf(line->files.out, "sub \t\t\t#%llu\n", node->id);
+                PRNT("sub", "");
                 break;
 
+            // *
             case O_MUL:
-                fprintf(line->files.out, "mul \t\t\t#%llu\n", node->id);
+                PRNT("mul", "");
                 break;
 
+            // /
             case O_DIV:
-                fprintf(line->files.out, "div \t\t\t#%llu\n", node->id);
+                PRNT("div", "");
                 break;
 
+            // print
             case O_PNT:
-                fprintf(line->files.out, "out \t\t\t#%llu\n", node->id);
+                PRNT("out", "");
                 break;
 
+            // ;
             case O_SEP:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                PRNT("", "");
                 break;
 
+            // =
             case O_EQL:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                PRNT("", "");
                 break;
 
+            // if
             case O_IFB:
-                fprintf(line->files.out, "\t\t\t\t#%llu\t Я КОНЕЦ ИФА\n", node->id);
+                PRNT("", "КОНЕЦ ИФА");
                 break;
 
+            // while
             case O_WHB:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                PRNT("", "КОНЕЦ ЦИКЛА");
                 break;
 
+            // function defenition
             case O_DEF:
-                fprintf(line->files.out, "\t\t\t\t#%llu\tЯ КОНЕЦ ФУНКЦИЯ\n", node->id);
+                PRNT("", "КОНЕЦ ОПРЕДЕЛЕНИЯ ФУНКЦИИ");
                 break;
 
+            // return
             case O_RET:
-                fprintf(line->files.out, "pop ax\t\t\t#%llu\n", node->id);
-                fprintf(line->files.out, "ret \t\t\t#%llu\n", node->id);
+                PRNT("pop ax", "");
+                PRNT("ret", "");
                 break;
 
+            // call
             case O_CAL:
-                fprintf(line->files.out, "\t\t\t\t#%llu\n", node->id);
+                PRNT("", "");
                 break;
 
+            // <
             case O_LES:
-                fprintf(line->files.out, "less\t\t#%llu\n", node->id);
+                PRNT("less", "");
                 break;
 
+            // <=
             case O_LSE:
-                fprintf(line->files.out, "less_equal\t\t#%llu\n", node->id);
+                PRNT("less_equal", "");
                 break;
 
+            // >
             case O_MOR:
-                fprintf(line->files.out, "more\t\t#%llu\n", node->id);
+                PRNT("more", "");
                 break;
 
+            // >=
             case O_MRE:
-                fprintf(line->files.out, "more_equal\t\t#%llu\n", node->id);
+                PRNT("more_equal", "");
                 break;
 
+            // ==
             case O_EQQ:
-                fprintf(line->files.out, "equal\t\t#%llu\n", node->id);
+                PRNT("equal", "");
+                break;
+
+            // !=
+            case O_NEQ:
+                PRNT("not_equal", "");
+                break;
+
+            // ^
+            case O_POW:
+                PRNT("power", "");
+                break;
+
+            // ,
+            case O_CMA:
+                PRNT("", "");
                 break;
 
             default:
-                fprintf(line->files.out, "??? \t\t\t#%llu\n", node->id);
+                PRNT("uknown node", "");
                 break;
         }
     }
@@ -323,21 +372,22 @@ static int CreateAddr(line_t* line, node_t* node){
 static int ProcessArgs(line_t* line, node_t* node){
     node_t* nodeSpec = node->left;
 
-    int frameSize = 0;
+    int paramCount = 0;
 
     node_t* nodeComma = nodeSpec;
 
     while (nodeComma->right && nodeComma->right->type == T_OPR && nodeComma->right->data.op == O_CMA){
-        frameSize += 1;
+        paramCount += 1;
 
         nodeComma = nodeComma->right;
         node_t* nodeArg = nodeComma->left;
 
         line->id[nodeArg->data.id].visibilityType   = LOCAL;
-        line->id[nodeArg->data.id].memAddr          = frameSize;
+        line->id[nodeArg->data.id].memAddr          = paramCount;
     }
 
-    line->id[nodeSpec->left->data.id].stackFrameSize = frameSize;
+    line->id[nodeSpec->left->data.id].stackFrameSize = paramCount;
+    line->id[nodeSpec->left->data.id].numParams = paramCount;
 
     return OK;
 }
@@ -361,6 +411,21 @@ static int SetNameTypes(line_t* line, node_t* node){
 
     if (node->left)  SetNameTypes(line, node->left);
     if (node->right) SetNameTypes(line, node->right);
+
+    return OK;
+}
+
+static int PlaceNumOp(line_t* line, int numSpaces, int numLine, int param, node_t* node){
+
+    for (int i = 0; i < 32 - numSpaces; i++){
+        fprintf(line->files.out, " ");
+    }
+
+    fprintf(line->files.out, "line;%0.3d\t", numLine);
+
+    fprintf(line->files.out, "node;%0.3llu\t", node->id);
+
+    if (param) fprintf(line->files.out, "\n");
 
     return OK;
 }

@@ -10,7 +10,7 @@ const char*   DFLT_OUT_FILE  = "autoformatted.txt";
 const char*   DFLT_DOT_FILE  = "./bin/dot.dot";
 
 const int64_t MAX_IDS  = 16;
-const int64_t BUFF_LEN = 16;
+const int64_t BUFF_LEN = 32;
 
 enum errors{
 

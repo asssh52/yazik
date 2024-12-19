@@ -92,10 +92,16 @@ int DumpIds(line_t* line, FILE* file){
 
     for (int i = 0; i < line->numId; i++){
         fprintf(file, "%02d. name:", i);
-        // for (int j = 0; j < line->id[i].len; j++){
-        //     fprintf(file, "%c", line->id[i].name[j]);
-        // }
-        fprintf(file, "%-10.10s", line->id[i].name);
+        for (int j = 0; j < line->id[i].len && j < 8; j++){
+            fprintf(file, "%c", line->id[i].name[j]);
+        }
+
+        if (line->id[i].len < 8){
+            for (int j = 0; j < 8 - line->id[i].len; j++){
+                fprintf(file, "%c", ' ');
+            }
+        }
+        //fprintf(file, "%c", line->id[i].name[0]);
 
         fprintf(file, "\t len:%llu",        line->id[i].len);
         fprintf(file, "\t idType:%c",       line->id[i].idType);

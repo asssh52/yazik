@@ -16,8 +16,9 @@ int main(){
     AnalyseInput(&line);
 
     LineProcess(&line);
+        MEOW
     LineSave(&line);
-
+    MEOW
 
     FILE* file = fopen("save.txt", "r");
     line.files.save = file;

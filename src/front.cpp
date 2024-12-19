@@ -582,7 +582,12 @@ static node_t* GetE(line_t* line){
     if (!left) return 0;
 
     int op = line->tokens[line->tptr].data.op;
-    while (line->tokens[line->tptr].type == T_OPR && (op == O_ADD || op == O_SUB || op == O_MUL || op == O_DIV || op == O_LES || op == O_LSE || op == O_MOR || op == O_MRE || op == O_EQQ)){
+    while (line->tokens[line->tptr].type == T_OPR &&
+        (op == O_ADD || op == O_SUB || op == O_MUL ||   // +  -  *
+         op == O_DIV || op == O_LES || op == O_LSE ||   // /  <  <=
+         op == O_MOR || op == O_MRE || op == O_EQQ ||   // >  >= ==
+         op == O_NEQ || op == O_POW)){                  // != ^
+
         node_t* opNode  = line->tokens + line->tptr;
         line->tptr++;
         line->tree->numElem += 1;

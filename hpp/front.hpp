@@ -7,9 +7,9 @@
 #include "../hpp/ops.hpp"
 
 
-const int64_t MAX_BUFF = 256;
-const int64_t MAX_TKNS = 64;
-const int64_t MAX_IDS  = 16;
+const int64_t MAX_BUFF = 2048;
+const int64_t MAX_TKNS = 512;
+const int64_t MAX_IDS  = 32;
 
 
 int AnalyseInput    (line_t* line);

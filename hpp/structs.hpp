@@ -61,6 +61,7 @@ typedef struct names_t{
     int         visibilityType; // global/local
     int         idType;         // func/var
     int         stackFrameSize; // for funcs
+    int         numParams;      // for funcs
 
     int         memAddr;
 

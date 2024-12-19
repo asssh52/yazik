@@ -33,6 +33,8 @@ enum nodeOperations{
     O_MOR = 111,    // o
     O_MRE = 112,    // p
     O_EQQ = 113,    // q
+    O_NEQ = 114,    // r
+    O_POW = 94,     // ^
 
     O_SIN = 115,    // s
     O_COS = 99,     // c
@@ -67,6 +69,8 @@ const opName_t opList[] = {
     {"more",        O_MOR, 4,   "more",         4   },
     {"more_equal",  O_MRE, 10,  "more_equal",  10   },
     {"equal",       O_EQQ, 5,   "==",           2   },
+    {"not_equal",   O_NEQ, 9,   "!=",           2   },
+    {"pow",         O_POW, 3,   "^",            1   },
     {"sin",         O_SIN, 3,   "NAN",         -1   },
     {"cos",         O_COS, 3,   "NAN",         -1   },
     {"tan",         O_TAN, 3,   "NAN",         -1   },
